@@ -81,14 +81,23 @@ export default function DashboardPage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <header className="flex justify-between items-center mb-8 py-4 border-b">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <button
-            onClick={handleLogout}
-            className="text-red-600 hover:text-red-800 text-sm font-medium"
-          >
-            Logout
-          </button>
-        </header>
+  <h1 className="text-2xl font-bold">Dashboard</h1>
+  <div className="flex gap-4">
+    <button
+      onClick={() => router.push('/history')}
+      className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+    >
+      <span>📚</span>
+      <span>History Tryout</span>
+    </button>
+    <button
+      onClick={handleLogout}
+      className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+    >
+      Logout
+    </button>
+  </div>
+</header>
 
         {/* Profil User */}
         <div className="bg-white p-6 rounded-lg shadow mb-8">

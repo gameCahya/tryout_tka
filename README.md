@@ -1,36 +1,186 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 📚 Dokumentasi Lengkap - 3 Tipe Soal
 
-## Getting Started
+Sistem tryout sekarang mendukung **3 tipe soal berbeda**:
 
-First, run the development server:
+## 1️⃣ Single Answer (Radio Button)
+**Contoh:** Pilih satu jawaban yang paling tepat
+- User memilih **1 jawaban** dari A/B/C/D
+- Tampilan: Radio button
+- Scoring: Benar jika pilihan = jawaban yang benar
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 2️⃣ Multiple Answer - PGK MCMA (Checkbox)
+**Contoh:** Pilih semua jawaban yang benar (bisa lebih dari 1)
+- User memilih **beberapa jawaban** (A, C, D)
+- Tampilan: Checkbox
+- Scoring: Benar jika **SEMUA** pilihan cocok dengan jawaban benar
+
+## 3️⃣ PGK Kategori - Statement Reasoning (Benar/Salah)
+**Contoh:** Tentukan Benar atau Salah untuk setiap pernyataan
+
+| # | Pernyataan | Benar | Salah |
+|---|------------|-------|-------|
+| A | Besar sudut D adalah 50° | ○ | ● |
+| B | Sudut C dapat ditentukan | ● | ○ |
+| C | Sudut B dan E sama besar | ● | ○ |
+
+- User menentukan **Benar/Salah** untuk **setiap pernyataan**
+- Tampilan: Tabel dengan radio button Benar/Salah
+- Scoring: Benar jika **SEMUA** pernyataan dijawab benar
+
+---
+
+## 🎯 Cara Menggunakan di Admin Panel
+
+### Step 1: Pilih Tipe Soal
+```
+Tipe Soal: [Dropdown]
+- Single Answer (Radio)
+- Multiple Answer - PGK MCMA (Checkbox)
+- PGK Kategori - Benar/Salah ✓
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Step 2: Isi Pilihan Jawaban
+Masukkan pernyataan di setiap opsi A, B, C, D
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Step 3: Tentukan Jawaban Benar
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Untuk Single Answer:**
+- Pilih 1 dari dropdown (A/B/C/D)
 
-## Learn More
+**Untuk MCMA:**
+- Check semua yang benar (misal: A, C, D)
 
-To learn more about Next.js, take a look at the following resources:
+**Untuk Reasoning:**
+- Klik Benar/Salah untuk setiap pernyataan
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| # | Pernyataan | Benar | Salah |
+|---|------------|-------|-------|
+| A | ... | ● | ○ |
+| B | ... | ○ | ● |
+| C | ... | ● | ○ |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Step 4: Submit
+Soal akan tersimpan dengan format yang benar!
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 💾 Format Database
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Single Answer
+```json
+{
+  "question_type": "single",
+  "correct_answer_index": 2
+}
+```
+
+### Multiple Answer
+```json
+{
+  "question_type": "multiple",
+  "correct_answer_index": -1,
+  "correct_answers": [0, 2, 3]
+}
+```
+
+### Reasoning
+```json
+{
+  "question_type": "reasoning",
+  "correct_answer_index": -1,
+  "reasoning_answers": {
+    "0": "salah",
+    "1": "benar",
+    "2": "benar"
+  }
+}
+```
+
+---
+
+## 🎨 Tampilan untuk User
+
+### Di Halaman Tryout:
+
+**Single:** Radio button biasa
+```
+○ A. Jawaban 1
+● B. Jawaban 2
+○ C. Jawaban 3
+```
+
+**MCMA:** Checkbox dengan badge "PGK MCMA"
+```
+📋 PGK MCMA - Pilih lebih dari satu jawaban
+
+☑ A. Jawaban 1
+☐ B. Jawaban 2
+☑ C. Jawaban 3
+```
+
+**Reasoning:** Tabel dengan badge "PGK Kategori"
+```
+⚖️ PGK Kategori - Tentukan Benar/Salah
+
+| # | Pernyataan     | Benar | Salah |
+|---|----------------|-------|-------|
+| A | Pernyataan 1   |   ○   |   ●   |
+| B | Pernyataan 2   |   ●   |   ○   |
+```
+
+### Di Halaman Review:
+
+Menampilkan:
+- ✓ Jawaban Benar (hijau)
+- ✗ Jawaban Salah (merah)
+- Perbandingan jawaban user vs jawaban benar
+
+---
+
+## 📊 Scoring Logic
+
+```javascript
+// Single Answer
+if (userAnswer === correctAnswer) score++;
+
+// MCMA
+if (
+  userAnswers.length === correctAnswers.length &&
+  userAnswers.every(ans => correctAnswers.includes(ans))
+) score++;
+
+// Reasoning
+let allCorrect = true;
+for (let i = 0; i < options.length; i++) {
+  if (userReasoning[i] !== correctReasoning[i]) {
+    allCorrect = false;
+    break;
+  }
+}
+if (allCorrect) score++;
+```
+
+---
+
+## ✅ Checklist Implementasi
+
+- [x] Admin page - form input
+- [x] Database migration
+- [x] Tryout page - display soal
+- [x] Tryout page - save jawaban
+- [x] Scoring logic
+- [x] Review page - display hasil
+- [x] Validasi form
+- [x] Styling & UX
+
+---
+
+## 🚀 Next Steps
+
+Sekarang sistem sudah lengkap untuk 3 tipe soal! Tinggal:
+1. Run SQL migration di Supabase
+2. Test buat soal di admin panel
+3. Test kerjakan tryout
+4. Test lihat review
+
+**Semua sudah siap digunakan!** 🎉
