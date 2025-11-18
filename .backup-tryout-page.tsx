@@ -27,13 +27,13 @@ export default function TryoutPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
   const [multipleAnswers, setMultipleAnswers] = useState<number[][]>([]);
-  const [reasoningAnswers, setReasoningAnswers] = useState<{ [key: number]: { [key: number]: 'benar' | 'salah' } }>({});
+  const [reasoningAnswers, setReasoningAnswers] = useState<{ [key: number]: { [key: number]: 'benar' | 'salah' } }>({}); // For reasoning type
   const [timeLeft, setTimeLeft] = useState(0);
   const [duration, setDuration] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Fetch tryout data
+  // Ambil data tryout & soal
   useEffect(() => {
     const fetchTryoutData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -108,7 +108,7 @@ export default function TryoutPage() {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          submitTryout();
+          handleSubmit();
           return 0;
         }
         return prev - 1;
@@ -118,7 +118,7 @@ export default function TryoutPage() {
     return () => clearInterval(timer);
   }, [timeLeft, questions.length]);
 
-  // Save answers to localStorage
+  // Simpan jawaban sementara
   useEffect(() => {
     if (questions.length > 0) {
       localStorage.setItem(`tryout_${tryoutId}_answers`, JSON.stringify(answers));
@@ -129,10 +129,15 @@ export default function TryoutPage() {
 
   const getImageUrl = (url: string | null | undefined): string | null => {
     if (!url) return null;
+    
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
-    const { data } = supabase.storage.from('questions').getPublicUrl(url);
+    
+    const { data } = supabase.storage
+      .from('questions')
+      .getPublicUrl(url);
+    
     return data.publicUrl;
   };
 
@@ -200,6 +205,7 @@ export default function TryoutPage() {
               crossOrigin="anonymous"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
+                console.error('Failed to load image:', imgPart);
               }}
             />
           );
@@ -254,140 +260,70 @@ export default function TryoutPage() {
     }
   };
 
-  const submitTryout = async () => {
-    console.log('🚀 SUBMIT FUNCTION CALLED');
-    
-    if (submitting) {
-      console.log('⏸️ Already submitting...');
-      return;
-    }
-    
+  const handleSubmit = async () => {
+    if (submitting) return;
     setSubmitting(true);
 
-    try {
-      console.log('📝 Step 1: Getting session...');
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        console.log('❌ No session found');
-        router.push('/auth/login');
-        return;
-      }
-      
-      console.log('✅ Session found:', session.user.id);
-
-      // Calculate score
-      console.log('📊 Step 2: Calculating score...');
-      let score = 0;
-      const userAnswersData: any[] = [];
-
-      questions.forEach((q, i) => {
-        let isCorrect = false;
-
-        if (q.question_type === 'multiple' && q.correct_answers) {
-          const userAnswers = multipleAnswers[i] || [];
-          const correctAnswers = q.correct_answers;
-          
-          isCorrect = userAnswers.length === correctAnswers.length &&
-            userAnswers.every(ans => correctAnswers.includes(ans));
-          
-          userAnswersData.push({
-            question_id: q.id,
-            user_answer: -1,
-            user_answers: userAnswers,
-            user_reasoning: null,
-            is_correct: isCorrect,
-          });
-        } else if (q.question_type === 'reasoning' && q.reasoning_answers) {
-          const userAns = reasoningAnswers[i] || {};
-          const correctAns = q.reasoning_answers;
-          
-          isCorrect = true;
-          for (let optIdx = 0; optIdx < q.options.length; optIdx++) {
-            if (userAns[optIdx] !== correctAns[optIdx]) {
-              isCorrect = false;
-              break;
-            }
-          }
-          
-          userAnswersData.push({
-            question_id: q.id,
-            user_answer: -1,
-            user_answers: null,
-            user_reasoning: userAns,
-            is_correct: isCorrect,
-          });
-        } else {
-          isCorrect = answers[i] === q.correct_answer_index;
-          
-          userAnswersData.push({
-            question_id: q.id,
-            user_answer: answers[i] || -1,
-            user_answers: null,
-            user_reasoning: null,
-            is_correct: isCorrect,
-          });
-        }
-
-        if (isCorrect) score++;
-      });
-
-      console.log('✅ Score:', score, '/', questions.length);
-
-      // Save result
-      console.log('💾 Step 3: Saving result...');
-      const { data: resultData, error: resultError } = await supabase
-        .from('results')
-        .insert({
-          user_id: session.user.id,
-          tryout_id: tryoutId,
-          score,
-          total_questions: questions.length,
-          duration_seconds: duration - timeLeft,
-          completed_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (resultError) {
-        console.error('❌ Result error:', resultError);
-        alert('Gagal menyimpan hasil: ' + resultError.message);
-        setSubmitting(false);
-        return;
-      }
-
-      console.log('✅ Result saved:', resultData.id);
-
-      // Save user answers
-      console.log('💾 Step 4: Saving answers...');
-      const answersToInsert = userAnswersData.map(ans => ({
-        ...ans,
-        result_id: resultData.id,
-      }));
-
-      const { error: answersError } = await supabase
-        .from('user_answers')
-        .insert(answersToInsert);
-
-      if (answersError) {
-        console.error('❌ Answers error:', answersError);
-      } else {
-        console.log('✅ Answers saved');
-      }
-
-      // Clear localStorage
-      localStorage.removeItem(`tryout_${tryoutId}_answers`);
-      localStorage.removeItem(`tryout_${tryoutId}_multiple_answers`);
-      localStorage.removeItem(`tryout_${tryoutId}_reasoning_answers`);
-
-      // Redirect
-      console.log('🎉 Redirecting...');
-      router.push(`/tryout/result?score=${score}&total=${questions.length}&duration=${duration - timeLeft}`);
-    } catch (err: any) {
-      console.error('❌ Error:', err);
-      alert('Error: ' + err.message);
-      setSubmitting(false);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      router.push('/auth/login');
+      return;
     }
+
+    let score = 0;
+    questions.forEach((q, i) => {
+      if (q.question_type === 'multiple' && q.correct_answers) {
+        // For MCMA: all answers must match
+        const userAnswers = multipleAnswers[i] || [];
+        const correctAnswers = q.correct_answers;
+        
+        if (
+          userAnswers.length === correctAnswers.length &&
+          userAnswers.every(ans => correctAnswers.includes(ans))
+        ) {
+          score++;
+        }
+      } else if (q.question_type === 'reasoning' && q.reasoning_answers) {
+        // For reasoning: all benar/salah must match
+        const userAns = reasoningAnswers[i] || {};
+        const correctAns = q.reasoning_answers;
+        
+        let allCorrect = true;
+        for (let optIdx = 0; optIdx < q.options.length; optIdx++) {
+          if (userAns[optIdx] !== correctAns[optIdx]) {
+            allCorrect = false;
+            break;
+          }
+        }
+        
+        if (allCorrect) score++;
+      } else {
+        // For single answer
+        if (answers[i] === q.correct_answer_index) score++;
+      }
+    });
+
+    const { error } = await supabase.from('results').insert({
+      user_id: session.user.id,
+      tryout_id: tryoutId,
+      score,
+      total_questions: questions.length,
+      duration_seconds: duration - timeLeft,
+      completed_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      console.error('Gagal simpan hasil:', error);
+      alert('Gagal menyimpan hasil. Coba lagi.');
+      setSubmitting(false);
+      return;
+    }
+
+    localStorage.removeItem(`tryout_${tryoutId}_answers`);
+    localStorage.removeItem(`tryout_${tryoutId}_multiple_answers`);
+    localStorage.removeItem(`tryout_${tryoutId}_reasoning_answers`);
+
+    router.push(`/tryout/result?score=${score}&total=${questions.length}&duration=${duration - timeLeft}`);
   };
 
   if (loading) {
@@ -447,6 +383,7 @@ export default function TryoutPage() {
               crossOrigin="anonymous"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
+                console.error('Failed to load image:', currentQuestion.image_url);
               }}
             />
           )}
@@ -463,11 +400,11 @@ export default function TryoutPage() {
           
           {currentQuestion.question_type === 'reasoning' && (
             <div className="mb-3 inline-block bg-purple-100 text-purple-800 text-xs px-3 py-1 rounded-full font-medium">
-              ⚖️ PGK Kategori - Tentukan Benar/Salah
+              ⚖️ PGK Kategori - Tentukan Benar/Salah untuk setiap pernyataan
             </div>
           )}
           
-          {/* Display Options Based on Question Type */}
+          {/* Options Display */}
           {currentQuestion.question_type === 'reasoning' ? (
             // Reasoning Type - Table with Benar/Salah
             <div className="overflow-x-auto">
@@ -585,22 +522,22 @@ export default function TryoutPage() {
           <button
             onClick={handlePrev}
             disabled={currentQuestionIndex === 0}
-            className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+            className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50 hover:bg-gray-400 transition-colors"
           >
             Sebelumnya
           </button>
           {currentQuestionIndex === questions.length - 1 ? (
             <button
-              onClick={submitTryout}
+              onClick={handleSubmit}
               disabled={submitting}
-              className="px-4 py-2 bg-green-600 text-white rounded disabled:opacity-50"
+              className="px-4 py-2 bg-green-600 text-white rounded disabled:opacity-50 hover:bg-green-700 transition-colors"
             >
               {submitting ? 'Menyimpan...' : 'Selesai'}
             </button>
           ) : (
             <button
               onClick={handleNext}
-              className="px-4 py-2 bg-blue-600 text-white rounded"
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
             >
               Berikutnya
             </button>
