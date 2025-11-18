@@ -26,6 +26,31 @@ export default function RegisterPage() {
     return num;
   };
 
+  // Fungsi untuk mengirim WhatsApp
+  const sendWelcomeWA = async (phone: string, fullName: string) => {
+    try {
+      const response = await fetch('/api/send-wa', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone, fullName }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('Gagal mengirim WA:', data);
+        // Tidak throw error agar registrasi tetap berhasil
+      } else {
+        console.log('WhatsApp berhasil dikirim:', data);
+      }
+    } catch (error) {
+      console.error('Error sending WhatsApp:', error);
+      // Tidak throw error agar registrasi tetap berhasil
+    }
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -52,10 +77,10 @@ export default function RegisterPage() {
         email: fakeEmail,
         password,
         options: {
-          data: {  // ✅ FIX: tambahkan "data:"
+          data: {
             full_name: fullName,
             phone: cleanPhoneNum,
-            school,
+            school: school,
           },
         },
       });
@@ -78,10 +103,13 @@ export default function RegisterPage() {
           id: authData.user.id,
           full_name: fullName,
           phone: cleanPhoneNum,
-          school,
+          school: school,
         });
 
       if (profileError) throw profileError;
+
+      // 4. Kirim WhatsApp selamat datang
+      await sendWelcomeWA(cleanPhoneNum, fullName);
 
       // Redirect
       router.push('/dashboard');

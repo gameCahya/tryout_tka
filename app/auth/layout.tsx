@@ -9,7 +9,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
+      <body suppressHydrationWarning>
         <Suspense fallback={<div>Loading...</div>}>
           {children}
         </Suspense>
