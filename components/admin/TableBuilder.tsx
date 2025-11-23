@@ -1,3 +1,6 @@
+// ============================================
+// FILE: components/admin/TableBuilder.tsx
+// ============================================
 'use client';
 
 type TableBuilderProps = {
@@ -23,29 +26,31 @@ export default function TableBuilder({ tableRows, onChange }: TableBuilderProps)
   };
 
   return (
-    <div className="mb-4 p-4 border rounded bg-gray-50">
-      <label className="block text-sm font-medium mb-2">Tabel Data</label>
+    <div className="mb-4 p-4 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700/50">
+      <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Tabel Data</label>
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse border">
+        <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
           <tbody>
             {tableRows.map((row, rowIdx) => (
-              <tr key={rowIdx}>
+              <tr key={rowIdx} className={rowIdx === 0 ? 'bg-gray-100 dark:bg-gray-700' : ''}>
                 {row.map((cell, colIdx) => (
-                  <td key={colIdx} className="border p-1">
+                  <td key={colIdx} className="border border-gray-300 dark:border-gray-600 p-1">
                     <input
                       type="text"
                       value={cell}
                       onChange={(e) => handleCellChange(rowIdx, colIdx, e.target.value)}
-                      className="w-full p-1 text-sm"
+                      className="w-full p-1 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-0 focus:ring-1 focus:ring-blue-500 rounded"
+                      placeholder={rowIdx === 0 ? 'Header' : 'Data'}
                     />
                   </td>
                 ))}
                 {rowIdx > 0 && (
-                  <td className="p-1">
+                  <td className="p-1 border border-gray-300 dark:border-gray-600">
                     <button
                       type="button"
                       onClick={() => removeRow(rowIdx)}
-                      className="text-red-600 text-xs px-2"
+                      className="text-red-600 dark:text-red-400 text-xs px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                      title="Hapus baris"
                     >
                       ✕
                     </button>
@@ -59,7 +64,7 @@ export default function TableBuilder({ tableRows, onChange }: TableBuilderProps)
       <button
         type="button"
         onClick={addRow}
-        className="mt-2 text-sm text-blue-600 hover:underline"
+        className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
       >
         + Tambah Baris
       </button>

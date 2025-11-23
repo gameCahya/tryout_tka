@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import QuestionForm from '@/components/admin/QuestionForm';
 import QuestionList from '@/components/admin/QuestionList';
+import ThemeToggle from '@/components/ThemeToggle'; 
 
 type Tryout = { id: string; title: string };
 
@@ -113,13 +114,16 @@ export default function AdminPage() {
   };
 
   if (!isAdmin) {
-    return <div className="p-4">Memuat...</div>;
+    return <div className="p-4 text-gray-900 dark:text-white">Memuat...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 transition-colors">
+      <ThemeToggle />
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Admin Panel - Kelola Soal</h1>
+        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
+          Admin Panel - Kelola Soal
+        </h1>
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
@@ -127,8 +131,8 @@ export default function AdminPage() {
             onClick={() => setActiveTab('add')}
             className={`px-6 py-3 rounded-lg font-medium transition-colors ${
               activeTab === 'add'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
+                ? 'bg-blue-600 text-white dark:bg-blue-500'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
             }`}
           >
             {editingQuestion ? '✏️ Edit Soal' : '➕ Tambah Soal'}
@@ -137,8 +141,8 @@ export default function AdminPage() {
             onClick={() => setActiveTab('view')}
             className={`px-6 py-3 rounded-lg font-medium transition-colors ${
               activeTab === 'view'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
+                ? 'bg-blue-600 text-white dark:bg-blue-500'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
             }`}
           >
             📋 Lihat Soal

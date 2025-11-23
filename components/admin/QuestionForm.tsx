@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import AnswerSelector from './AnswerSelector';
 import TableBuilder from './TableBuilder';
@@ -39,9 +39,28 @@ type FormData = {
 };
 
 export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCancel }: QuestionFormProps) {
-  const [form, setForm] = useState<FormData>(() => {
+  const [form, setForm] = useState<FormData>({
+    tryout_id: '',
+    question_text: '',
+    options: ['', '', '', ''],
+    correct_answer_index: 0,
+    correct_answers: [],
+    explanation: '',
+    has_table: false,
+    question_type: 'single',
+    reasoning_answers: {},
+  });
+
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [tableRows, setTableRows] = useState<string[][]>([
+    ['No Soal', 'Kompetensi', 'Sub Kompetensi', 'Bentuk Soal', 'Kunci'],
+    ['', '', '', '', '']
+  ]);
+
+  useEffect(() => {
     if (editingQuestion) {
-      return {
+      setForm({
         tryout_id: editingQuestion.tryout_id,
         question_text: editingQuestion.question_text,
         options: editingQuestion.options,
@@ -51,27 +70,21 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
         has_table: false,
         question_type: editingQuestion.question_type,
         reasoning_answers: editingQuestion.reasoning_answers || {},
-      };
+      });
+    } else {
+      setForm({
+        tryout_id: '',
+        question_text: '',
+        options: ['', '', '', ''],
+        correct_answer_index: 0,
+        correct_answers: [],
+        explanation: '',
+        has_table: false,
+        question_type: 'single',
+        reasoning_answers: {},
+      });
     }
-    return {
-      tryout_id: '',
-      question_text: '',
-      options: ['', '', '', ''],
-      correct_answer_index: 0,
-      correct_answers: [],
-      explanation: '',
-      has_table: false,
-      question_type: 'single',
-      reasoning_answers: {},
-    };
-  });
-
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [tableRows, setTableRows] = useState<string[][]>([
-    ['No Soal', 'Kompetensi', 'Sub Kompetensi', 'Bentuk Soal', 'Kunci'],
-    ['', '', '', '', '']
-  ]);
+  }, [editingQuestion]);
 
   const handleOptionChange = (index: number, value: string) => {
     const newOptions = [...form.options];
@@ -128,7 +141,7 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
         questionText += `\n\n![Soal](${imageUrl.trim()})`;
       }
 
-      const insertData: any = {
+      const dataToSave: any = {
         tryout_id: form.tryout_id,
         question_text: questionText,
         options: form.options,
@@ -142,15 +155,32 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
       if (editingQuestion) {
         const { error } = await supabase
           .from('questions')
-          .update(insertData)
+          .update(dataToSave)
           .eq('id', editingQuestion.id);
         if (error) throw error;
         alert('Soal berhasil diupdate!');
       } else {
-        const { error } = await supabase.from('questions').insert(insertData);
+        const { error } = await supabase.from('questions').insert(dataToSave);
         if (error) throw error;
         alert('Soal berhasil ditambahkan!');
       }
+
+      setForm({
+        tryout_id: '',
+        question_text: '',
+        options: ['', '', '', ''],
+        correct_answer_index: 0,
+        correct_answers: [],
+        explanation: '',
+        has_table: false,
+        question_type: 'single',
+        reasoning_answers: {},
+      });
+      setImageFile(null);
+      setTableRows([
+        ['No Soal', 'Kompetensi', 'Sub Kompetensi', 'Bentuk Soal', 'Kunci'],
+        ['', '', '', '', '']
+      ]);
 
       onSuccess();
     } catch (err: any) {
@@ -161,15 +191,26 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
     }
   };
 
+  const isFormValid = () => {
+    if (!form.tryout_id) return false;
+    if (form.question_type === 'multiple' && form.correct_answers.length === 0) return false;
+    if (form.question_type === 'reasoning') {
+      const filledOptions = form.options.filter(o => o.trim() !== '').length;
+      const answeredReasonings = Object.keys(form.reasoning_answers || {}).length;
+      if (answeredReasonings < filledOptions) return false;
+    }
+    return true;
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow">
+    <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 transition-colors">
       {editingQuestion && (
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded flex items-center justify-between">
-          <span className="text-yellow-800 font-medium">✏️ Mode Edit Soal</span>
+        <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded flex items-center justify-between">
+          <span className="text-yellow-800 dark:text-yellow-300 font-medium">✏️ Mode Edit Soal</span>
           <button
             type="button"
             onClick={onCancel}
-            className="text-sm text-red-600 hover:underline"
+            className="text-sm text-red-600 dark:text-red-400 hover:underline"
           >
             Batal Edit
           </button>
@@ -177,11 +218,11 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
       )}
 
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Tryout</label>
+        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Tryout</label>
         <select
           value={form.tryout_id}
           onChange={(e) => setForm({ ...form, tryout_id: e.target.value })}
-          className="w-full p-2 border rounded"
+          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           required
           disabled={!!editingQuestion}
         >
@@ -193,22 +234,22 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
       </div>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Teks Soal</label>
+        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Teks Soal</label>
         <textarea
           value={form.question_text}
           onChange={(e) => setForm({ ...form, question_text: e.target.value })}
-          className="w-full p-2 border rounded"
+          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           rows={3}
           required
         />
       </div>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Tipe Soal</label>
+        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Tipe Soal</label>
         <select
           value={form.question_type}
           onChange={(e) => setForm({ ...form, question_type: e.target.value as any })}
-          className="w-full p-2 border rounded"
+          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
         >
           <option value="single">Single Answer (Radio)</option>
           <option value="multiple">Multiple Answer - PGK MCMA (Checkbox)</option>
@@ -224,7 +265,7 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
             onChange={(e) => setForm({ ...form, has_table: e.target.checked })}
             className="mr-2"
           />
-          <span className="text-sm font-medium">Tambahkan Tabel</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Tambahkan Tabel</span>
         </label>
       </div>
 
@@ -236,25 +277,25 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
       )}
 
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Gambar Soal (Opsional)</label>
+        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Gambar Soal (Opsional)</label>
         <input
           type="file"
           accept="image/*"
           onChange={handleImageChange}
-          className="w-full p-2 border rounded"
+          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
         />
       </div>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-2">Pilihan Jawaban</label>
+        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Pilihan Jawaban</label>
         {form.options.map((option, idx) => (
           <div key={idx} className="flex items-center mb-2">
-            <span className="w-6 mr-2">{String.fromCharCode(65 + idx)}.</span>
+            <span className="w-6 mr-2 text-gray-700 dark:text-gray-300">{String.fromCharCode(65 + idx)}.</span>
             <input
               type="text"
               value={option}
               onChange={(e) => handleOptionChange(idx, e.target.value)}
-              className="flex-1 p-2 border rounded"
+              className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               required
             />
           </div>
@@ -273,11 +314,11 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
       />
 
       <div className="mb-6">
-        <label className="block text-sm font-medium mb-1">Pembahasan</label>
+        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Pembahasan</label>
         <textarea
           value={form.explanation}
           onChange={(e) => setForm({ ...form, explanation: e.target.value })}
-          className="w-full p-2 border rounded"
+          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           rows={3}
         />
       </div>
@@ -285,13 +326,8 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
       <div className="flex gap-2">
         <button
           type="submit"
-          disabled={
-            loading || 
-            !form.tryout_id || 
-            (form.question_type === 'multiple' && form.correct_answers.length === 0) ||
-            (form.question_type === 'reasoning' && Object.keys(form.reasoning_answers).length < form.options.filter(o => o).length)
-          }
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+          disabled={loading || !isFormValid()}
+          className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? 'Menyimpan...' : editingQuestion ? 'Update Soal' : 'Tambah Soal'}
         </button>
@@ -300,7 +336,7 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
           <button
             type="button"
             onClick={onCancel}
-            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+            className="bg-gray-500 dark:bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-600 dark:hover:bg-gray-700 transition-colors"
           >
             Batal
           </button>
