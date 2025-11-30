@@ -22,19 +22,19 @@ export default function ResultPage() {
   const seconds = durationSeconds % 60;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
       <div className="max-w-2xl mx-auto">
-        <div className="bg-white p-8 rounded-lg shadow text-center">
-          <h1 className="text-2xl font-bold mb-6">Hasil Tryout</h1>
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow dark:shadow-gray-700/50 text-center">
+          <h1 className="text-2xl font-bold mb-6 dark:text-white">Hasil Tryout</h1>
 
           <div className="mb-8">
-            <div className="text-5xl font-bold text-blue-600 mb-2">
+            <div className="text-5xl font-bold text-blue-600 dark:text-blue-400 mb-2">
               {score} / {total}
             </div>
-            <div className="text-lg text-gray-600 mb-4">
+            <div className="text-lg text-gray-600 dark:text-gray-300 mb-4">
               ({percentage}%)
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
               Waktu pengerjaan: {minutes} menit {seconds} detik
             </div>
           </div>
@@ -42,7 +42,7 @@ export default function ResultPage() {
           <div className="space-y-4">
             <button
               onClick={() => router.push('/dashboard')}
-              className="w-full py-3 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition"
+              className="w-full py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-md font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition"
             >
               Kembali ke Dashboard
             </button>
