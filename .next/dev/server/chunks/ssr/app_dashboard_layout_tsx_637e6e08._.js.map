@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///home/bangcs/Documents/tryout_tka/app/dashboard/layout.tsx"],"sourcesContent":["import { ReactNode } from 'react';\n\nexport default function DashboardLayout({\n  children,\n}: {\n  children: ReactNode;\n}) {\n  return <>{children}</>;\n}"],"names":[],"mappings":";;;;;;AAEe,SAAS,gBAAgB,EACtC,QAAQ,EAGT;IACC,qBAAO;kBAAG;;AACZ","debugId":null}}]
-}
