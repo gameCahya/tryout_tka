@@ -178,7 +178,7 @@ export default function RegisterPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Masukkan nama lengkap"
-                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 focus:bg-white dark:bg-gray-700/50 dark:border-gray-600 dark:focus:ring-blue-400 dark:text-white"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 focus:bg-white dark:bg-gray-700/50 dark:border-gray-600 dark:focus:ring-blue-400 dark:focus:bg-gray-700 dark:text-white"
                   required
                 />
               </div>
@@ -201,7 +201,7 @@ export default function RegisterPage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="081234567890"
-                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 focus:bg-white dark:bg-gray-700/50 dark:border-gray-600 dark:focus:ring-blue-400 dark:text-white"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 focus:bg-white dark:bg-gray-700/50 dark:border-gray-600 dark:focus:ring-blue-400 dark:focus:bg-gray-700 dark:text-white"
                   required
                 />
               </div>
@@ -224,7 +224,7 @@ export default function RegisterPage() {
                   value={school}
                   onChange={(e) => setSchool(e.target.value)}
                   placeholder="Nama sekolah"
-                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 focus:bg-white dark:bg-gray-700/50 dark:border-gray-600 dark:focus:ring-blue-400 dark:text-white"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 focus:bg-white dark:bg-gray-700/50 dark:border-gray-600 dark:focus:ring-blue-400 dark:focus:bg-gray-700 dark:text-white"
                   required
                 />
               </div>
@@ -247,7 +247,7 @@ export default function RegisterPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Minimal 6 karakter"
-                  className="w-full pl-12 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 focus:bg-white dark:bg-gray-700/50 dark:border-gray-600 dark:focus:ring-blue-400 dark:text-white"
+                  className="w-full pl-12 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 focus:bg-white dark:bg-gray-700/50 dark:border-gray-600 dark:focus:ring-blue-400 dark:focus:bg-gray-700 dark:text-white"
                   minLength={6}
                   required
                 />

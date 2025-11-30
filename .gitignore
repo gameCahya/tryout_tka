@@ -8,12 +8,12 @@ build/
 .next/
 out/
 
-# Environment
+# Environment variables
 .env
 .env.local
 .env.*
 
-# Editor/IDE
+# IDE files
 .vscode/
 .idea/
 *.swp
@@ -22,34 +22,28 @@ out/
 # Logs
 *.log
 
-# Python
+# Python artifacts (if any Python files exist)
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Temp files
+# Coverage reports
+coverage/
+htmlcov/
+
+# Temporary files
 *.tmp
+*.temp
+
+# System files
 .DS_Store
 Thumbs.db
 
-# Coverage
-coverage/
-htmlcov/
-.coverage
-
-# MyPy
+# Cache directories
+.cache/
 .mypy_cache/
-
-# PyTest
 .pytest_cache/
-
-# Compiled files
-*.o
-*.obj
-*.exe
-*.dll
-*.so
-*.a
-*.out
+.nyc_output/
+coverage/
 ```
