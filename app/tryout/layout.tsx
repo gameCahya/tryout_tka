@@ -1,6 +1,7 @@
 // app/layout.tsx (atau buat wrapper khusus)
 
 import { Suspense } from 'react';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
 export default function RootLayout({
   children,
@@ -8,11 +9,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
-        <Suspense fallback={<div>Loading...</div>}>
-          {children}
-        </Suspense>
+        <ThemeProvider>
+          <Suspense fallback={<div>Loading...</div>}>
+            {children}
+          </Suspense>
+        </ThemeProvider>
       </body>
     </html>
   );

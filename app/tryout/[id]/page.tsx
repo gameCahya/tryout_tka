@@ -157,11 +157,11 @@ export default function TryoutPage() {
           
           return (
             <div key={partIndex} className="my-4 overflow-x-auto">
-              <table className="w-full border-collapse border border-gray-300">
-                <thead className="bg-gray-100">
+              <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
+                <thead className="bg-gray-100 dark:bg-gray-700">
                   <tr>
                     {headers.map((header, idx) => (
-                      <th key={idx} className="border border-gray-300 px-3 py-2 text-left font-medium">
+                      <th key={idx} className="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left font-medium dark:text-white">
                         {header}
                       </th>
                     ))}
@@ -169,9 +169,9 @@ export default function TryoutPage() {
                 </thead>
                 <tbody>
                   {bodyRows.map((row, rowIdx) => (
-                    <tr key={rowIdx} className={rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <tr key={rowIdx} className={rowIdx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700'}>
                       {row.map((cell, cellIdx) => (
-                        <td key={cellIdx} className="border border-gray-300 px-3 py-2">
+                        <td key={cellIdx} className="border border-gray-300 dark:border-gray-600 px-3 py-2 dark:text-white">
                           {cell}
                         </td>
                       ))}
@@ -196,7 +196,7 @@ export default function TryoutPage() {
               key={`${partIndex}-${index}`}
               src={imageUrl}
               alt={imageParts[index - 1] || 'Soal'}
-              className="max-w-full h-auto my-3 rounded border"
+              className="max-w-full h-auto my-3 rounded border dark:border-gray-700"
               crossOrigin="anonymous"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
@@ -207,7 +207,7 @@ export default function TryoutPage() {
         if (index % 3 === 1) {
           return null;
         }
-        return imgPart ? <span key={`${partIndex}-${index}`}>{imgPart}</span> : null;
+        return imgPart ? <span key={`${partIndex}-${index}`} className="dark:text-white">{imgPart}</span> : null;
       });
     });
   };
@@ -392,8 +392,8 @@ export default function TryoutPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Memuat soal...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <p className="dark:text-white">Memuat soal...</p>
       </div>
     );
   }
@@ -403,17 +403,17 @@ export default function TryoutPage() {
   const seconds = timeLeft % 60;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
       <div className="max-w-3xl mx-auto">
-        <div className="flex justify-between items-center mb-6 py-4 border-b">
-          <h1 className="text-xl font-bold">Tryout</h1>
+        <div className="flex justify-between items-center mb-6 py-4 border-b dark:border-gray-700">
+          <h1 className="text-xl font-bold dark:text-white">Tryout</h1>
           <div className="bg-red-600 text-white px-3 py-1 rounded font-mono">
             {minutes}:{seconds < 10 ? '0' : ''}{seconds}
           </div>
         </div>
 
         <div className="mb-6">
-          <div className="flex justify-between text-sm text-gray-600 mb-1">
+          <div className="flex justify-between text-sm text-gray-600 dark:text-gray-300 mb-1">
             <span>Soal {currentQuestionIndex + 1} dari {questions.length}</span>
             <span>
               Terjawab: {
@@ -430,7 +430,7 @@ export default function TryoutPage() {
               }/{questions.length}
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
             <div
               className="bg-blue-600 h-2 rounded-full"
               style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
@@ -438,12 +438,12 @@ export default function TryoutPage() {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow mb-6 dark:shadow-gray-900">
           {currentQuestion.image_url && (
             <img
               src={getImageUrl(currentQuestion.image_url) || ''}
               alt="Soal"
-              className="max-w-full h-auto mb-4 rounded border"
+              className="max-w-full h-auto mb-4 rounded border dark:border-gray-700"
               crossOrigin="anonymous"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
@@ -451,18 +451,18 @@ export default function TryoutPage() {
             />
           )}
           
-          <div className="text-lg font-medium mb-4">
+          <div className="text-lg font-medium mb-4 dark:text-white">
             {renderQuestionText(currentQuestion.question_text)}
           </div>
           
           {currentQuestion.question_type === 'multiple' && (
-            <div className="mb-3 inline-block bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full font-medium">
+            <div className="mb-3 inline-block bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs px-3 py-1 rounded-full font-medium">
               📋 PGK MCMA - Pilih lebih dari satu jawaban
             </div>
           )}
           
           {currentQuestion.question_type === 'reasoning' && (
-            <div className="mb-3 inline-block bg-purple-100 text-purple-800 text-xs px-3 py-1 rounded-full font-medium">
+            <div className="mb-3 inline-block bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 text-xs px-3 py-1 rounded-full font-medium">
               ⚖️ PGK Kategori - Tentukan Benar/Salah
             </div>
           )}
@@ -471,13 +471,13 @@ export default function TryoutPage() {
           {currentQuestion.question_type === 'reasoning' ? (
             // Reasoning Type - Table with Benar/Salah
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse border border-gray-300">
-                <thead className="bg-gray-100">
+              <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
+                <thead className="bg-gray-100 dark:bg-gray-700">
                   <tr>
-                    <th className="border border-gray-300 p-3 text-left">#</th>
-                    <th className="border border-gray-300 p-3 text-left">Pernyataan</th>
-                    <th className="border border-gray-300 p-3 text-center w-24">Benar</th>
-                    <th className="border border-gray-300 p-3 text-center w-24">Salah</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-3 text-left dark:text-white">#</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-3 text-left dark:text-white">Pernyataan</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-3 text-center w-24 dark:text-white">Benar</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-3 text-center w-24 dark:text-white">Salah</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -485,21 +485,21 @@ export default function TryoutPage() {
                     const userAnswer = reasoningAnswers[currentQuestionIndex]?.[idx];
                     
                     return (
-                      <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="border border-gray-300 p-3 font-bold text-gray-700">
+                      <tr key={idx} className={idx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700'}>
+                        <td className="border border-gray-300 dark:border-gray-600 p-3 font-bold text-gray-700 dark:text-gray-200">
                           {String.fromCharCode(65 + idx)}.
                         </td>
-                        <td className="border border-gray-300 p-3">
+                        <td className="border border-gray-300 dark:border-gray-600 p-3 dark:text-white">
                           {option}
                         </td>
-                        <td className="border border-gray-300 p-3 text-center">
+                        <td className="border border-gray-300 dark:border-gray-600 p-3 text-center">
                           <button
                             type="button"
                             onClick={() => handleReasoningAnswerChange(idx, 'benar')}
                             className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
                               userAnswer === 'benar'
                                 ? 'border-green-500 bg-green-500'
-                                : 'border-gray-300 hover:border-green-400'
+                                : 'border-gray-300 dark:border-gray-600 hover:border-green-400 dark:hover:border-green-500'
                             }`}
                           >
                             {userAnswer === 'benar' && (
@@ -509,14 +509,14 @@ export default function TryoutPage() {
                             )}
                           </button>
                         </td>
-                        <td className="border border-gray-300 p-3 text-center">
+                        <td className="border border-gray-300 dark:border-gray-600 p-3 text-center">
                           <button
                             type="button"
                             onClick={() => handleReasoningAnswerChange(idx, 'salah')}
                             className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
                               userAnswer === 'salah'
                                 ? 'border-red-500 bg-red-500'
-                                : 'border-gray-300 hover:border-red-400'
+                                : 'border-gray-300 dark:border-gray-600 hover:border-red-400 dark:hover:border-red-500'
                             }`}
                           >
                             {userAnswer === 'salah' && (
@@ -548,14 +548,14 @@ export default function TryoutPage() {
                     onClick={() => isMultiple ? handleMultipleAnswerToggle(idx) : handleAnswerSelect(idx)}
                     className={`w-full text-left p-3 rounded border transition-colors flex items-start ${
                       isSelected
-                        ? 'border-blue-500 bg-blue-50 font-medium'
-                        : 'border-gray-300 hover:bg-gray-50'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-500 font-medium'
+                        : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
                     }`}
                   >
                     <div className="flex items-center mr-3 mt-1">
                       {isMultiple ? (
                         <div className={`w-5 h-5 border-2 rounded flex items-center justify-center ${
-                          isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-400'
+                          isSelected ? 'border-blue-500 bg-blue-500 dark:bg-blue-600' : 'border-gray-400 dark:border-gray-500'
                         }`}>
                           {isSelected && (
                             <svg className="w-3 h-3 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
@@ -565,13 +565,13 @@ export default function TryoutPage() {
                         </div>
                       ) : (
                         <div className={`w-5 h-5 border-2 rounded-full flex items-center justify-center ${
-                          isSelected ? 'border-blue-500' : 'border-gray-400'
+                          isSelected ? 'border-blue-500 dark:border-blue-500' : 'border-gray-400 dark:border-gray-500'
                         }`}>
-                          {isSelected && <div className="w-3 h-3 bg-blue-500 rounded-full"></div>}
+                          {isSelected && <div className="w-3 h-3 bg-blue-500 dark:bg-blue-500 rounded-full"></div>}
                         </div>
                       )}
                     </div>
-                    <span className="flex-1">
+                    <span className="flex-1 dark:text-white">
                       <strong>{String.fromCharCode(65 + idx)}.</strong> {option}
                     </span>
                   </button>
@@ -585,7 +585,7 @@ export default function TryoutPage() {
           <button
             onClick={handlePrev}
             disabled={currentQuestionIndex === 0}
-            className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+            className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50 dark:text-white"
           >
             Sebelumnya
           </button>
@@ -600,7 +600,7 @@ export default function TryoutPage() {
           ) : (
             <button
               onClick={handleNext}
-              className="px-4 py-2 bg-blue-600 text-white rounded"
+              className="px-4 py-2 bg-blue-600 text-white rounded dark:bg-blue-700"
             >
               Berikutnya
             </button>
