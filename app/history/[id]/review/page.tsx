@@ -213,32 +213,99 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
   };
 
   const renderQuestionText = (text: string) => {
-    // Simple render - bisa diexpand seperti di tryout page
-    const parts = text.split(/!\[([^\]]*)\]\(([^)]+)\)/g);
-    return parts.map((part, index) => {
-      if (index % 3 === 2) {
-        const imageUrl = getImageUrl(part);
-        if (!imageUrl) return null;
-        return (
-          <img
-            key={index}
-            src={imageUrl}
-            alt="Soal"
-            className="max-w-full h-auto my-3 rounded border"
-          />
-        );
-      }
-      if (index % 3 === 1) return null;
-      return part ? <span key={index}>{part}</span> : null;
-    });
+    // Enhanced render to handle tables and other formatting
+    // Split text by markdown table pattern first
+    const tableRegex = /\n\|.*\|\n\|[-|: ]+\|\n(?:\|(?:[^|\n]*\|)+\n?)+/;
+    const hasTable = tableRegex.test(text);
+    
+    if (hasTable) {
+      // Split by table
+      const parts = text.split(/(\n\|.*\|\n\|[-|: ]+\|\n(?:\|(?:[^|\n]*\|)+\n?)+)/g);
+      return parts.map((part, index) => {
+        if (part.startsWith('\n|')) {
+          // This is a table
+          const lines = part.trim().split('\n');
+          const headers = lines[0].split('|').map(h => h.trim()).filter(h => h);
+          const isHeaderRow = lines[1].includes('|-');
+          const rows = lines.slice(isHeaderRow ? 2 : 1).map(line => 
+            line.split('|').map(cell => cell.trim()).filter(cell => cell)
+          ).filter(row => row.length > 0);
+
+          return (
+            <div key={`table-${index}`} className="overflow-x-auto my-3">
+              <table className="min-w-full border-collapse border border-border">
+                <thead>
+                  <tr className="bg-muted">
+                    {headers.map((header, hIndex) => (
+                      <th key={hIndex} className="border border-border px-4 py-2 text-left font-medium text-foreground">
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row, rIndex) => (
+                    <tr key={rIndex} className={rIndex % 2 === 0 ? 'bg-background' : 'bg-muted'}>
+                      {row.map((cell, cIndex) => (
+                        <td key={cIndex} className="border border-border px-4 py-2 text-foreground">
+                          {cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        } else {
+          // Process regular text with image support
+          const textParts = part.split(/!\[([^\]]*)\]\(([^)]+)\)/g);
+          return textParts.map((textPart, textIndex) => {
+            if (textIndex % 3 === 2) {
+              const imageUrl = getImageUrl(textPart);
+              if (!imageUrl) return null;
+              return (
+                <img
+                  key={`img-${index}-${textIndex}`}
+                  src={imageUrl}
+                  alt="Soal"
+                  className="max-w-full h-auto my-3 rounded border border-border"
+                />
+              );
+            }
+            if (textIndex % 3 === 1) return null;
+            return textPart ? <span key={`text-${index}-${textIndex}`}>{textPart}</span> : null;
+          });
+        }
+      });
+    } else {
+      // Original processing for non-table content
+      const parts = text.split(/!\[([^\]]*)\]\(([^)]+)\)/g);
+      return parts.map((part, index) => {
+        if (index % 3 === 2) {
+          const imageUrl = getImageUrl(part);
+          if (!imageUrl) return null;
+          return (
+            <img
+              key={index}
+              src={imageUrl}
+              alt="Soal"
+              className="max-w-full h-auto my-3 rounded border border-border"
+            />
+          );
+        }
+        if (index % 3 === 1) return null;
+        return part ? <span key={index} className="text-foreground">{part}</span> : null;
+      });
+    }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Memuat review...</p>
+          <p className="text-muted-foreground">Memuat review...</p>
         </div>
       </div>
     );
@@ -251,32 +318,32 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
   const correctAnswers = isMultiple ? (currentQuestion.correct_answers || []) : [currentQuestion.correct_answer_index];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-background p-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">
           <button
             onClick={() => router.push('/history')}
-            className="text-blue-600 hover:text-blue-800 mb-4 flex items-center"
+            className="text-blue-600 hover:text-blue-700 dark:hover:text-blue-400 mb-4 flex items-center"
           >
             ← Kembali ke History
           </button>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">
+          <div className="bg-card rounded-lg shadow border border-border p-6">
+            <h1 className="text-2xl font-bold text-foreground mb-2">
               📝 Review: {result?.tryouts?.title}
             </h1>
-            <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-              <span>Skor: <strong className="text-blue-600">{result?.score}/{result?.total_questions}</strong></span>
-              <span>Persentase: <strong className="text-green-600">{((result?.score / result?.total_questions) * 100).toFixed(1)}%</strong></span>
+            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+              <span>Skor: <strong className="text-blue-600 dark:text-blue-400">{result?.score}/{result?.total_questions}</strong></span>
+              <span>Persentase: <strong className="text-green-600 dark:text-green-400">{((result?.score / result?.total_questions) * 100).toFixed(1)}%</strong></span>
             </div>
           </div>
         </div>
 
         {/* Navigation */}
-        <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <div className="bg-card rounded-lg shadow border border-border p-4 mb-6">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="font-semibold">Navigasi Soal</h3>
-            <span className="text-sm text-gray-600">
+            <h3 className="font-semibold text-foreground">Navigasi Soal</h3>
+            <span className="text-sm text-muted-foreground">
               {currentQuestionIndex + 1} / {questions.length}
             </span>
           </div>
@@ -291,8 +358,8 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
                     idx === currentQuestionIndex
                       ? 'bg-blue-600 text-white'
                       : ans?.is_correct
-                      ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                      : 'bg-red-100 text-red-700 hover:bg-red-200'
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800'
                   }`}
                 >
                   {idx + 1}
@@ -303,25 +370,25 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
         </div>
 
         {/* Question Review */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="bg-card rounded-lg shadow border border-border p-6 mb-6">
           {/* Status Badge */}
           <div className="mb-4">
             {userAnswer?.is_correct ? (
-              <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+              <div className="inline-flex items-center bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-3 py-1 rounded-full text-sm font-medium">
                 ✓ Jawaban Benar
               </div>
             ) : (
-              <div className="inline-flex items-center bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+              <div className="inline-flex items-center bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 px-3 py-1 rounded-full text-sm font-medium">
                 ✗ Jawaban Salah
               </div>
             )}
             {isMultiple && (
-              <div className="inline-flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium ml-2">
+              <div className="inline-flex items-center bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-3 py-1 rounded-full text-sm font-medium ml-2">
                 📋 PGK MCMA
               </div>
             )}
             {isReasoning && (
-              <div className="inline-flex items-center bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium ml-2">
+              <div className="inline-flex items-center bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 px-3 py-1 rounded-full text-sm font-medium ml-2">
                 ⚖️ PGK Kategori
               </div>
             )}
@@ -329,29 +396,29 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
 
           {/* Question */}
           <div className="mb-4">
-            <h3 className="text-lg font-semibold mb-2">Soal {currentQuestionIndex + 1}</h3>
+            <h3 className="text-lg font-semibold mb-2 text-foreground">Soal {currentQuestionIndex + 1}</h3>
             {currentQuestion.image_url && (
               <img
                 src={getImageUrl(currentQuestion.image_url) || ''}
                 alt="Soal"
-                className="max-w-full h-auto mb-4 rounded border"
+                className="max-w-full h-auto mb-4 rounded border border-border"
               />
             )}
-            <div className="text-gray-800">{renderQuestionText(currentQuestion.question_text)}</div>
+            <div className="text-foreground">{renderQuestionText(currentQuestion.question_text)}</div>
           </div>
 
           {/* Options */}
           {isReasoning ? (
             // Reasoning Type - Show table with correct/user answers
             <div className="overflow-x-auto mb-6">
-              <table className="w-full border-collapse border border-gray-300">
-                <thead className="bg-gray-100">
+              <table className="w-full border-collapse border border-border">
+                <thead className="bg-muted">
                   <tr>
-                    <th className="border border-gray-300 p-3 text-left">#</th>
-                    <th className="border border-gray-300 p-3 text-left">Pernyataan</th>
-                    <th className="border border-gray-300 p-3 text-center w-32">Jawaban Anda</th>
-                    <th className="border border-gray-300 p-3 text-center w-32">Jawaban Benar</th>
-                    <th className="border border-gray-300 p-3 text-center w-20">Status</th>
+                    <th className="border border-border p-3 text-left text-foreground">#</th>
+                    <th className="border border-border p-3 text-left text-foreground">Pernyataan</th>
+                    <th className="border border-border p-3 text-center w-32 text-foreground">Jawaban Anda</th>
+                    <th className="border border-border p-3 text-center w-32 text-foreground">Jawaban Benar</th>
+                    <th className="border border-border p-3 text-center w-20 text-foreground">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -361,34 +428,34 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
                     const isCorrect = userAns === correctAns;
                     
                     return (
-                      <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="border border-gray-300 p-3 font-bold">
+                      <tr key={idx} className={idx % 2 === 0 ? 'bg-card' : 'bg-muted'}>
+                        <td className="border border-border p-3 font-bold text-foreground">
                           {String.fromCharCode(65 + idx)}.
                         </td>
-                        <td className="border border-gray-300 p-3">
+                        <td className="border border-border p-3 text-foreground">
                           {option}
                         </td>
-                        <td className="border border-gray-300 p-3 text-center">
+                        <td className="border border-border p-3 text-center">
                           <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                            userAns === 'benar' ? 'bg-green-100 text-green-700' : 
-                            userAns === 'salah' ? 'bg-red-100 text-red-700' : 
-                            'bg-gray-100 text-gray-500'
+                            userAns === 'benar' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 
+                            userAns === 'salah' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 
+                            'bg-muted text-muted-foreground dark:bg-gray-800'
                           }`}>
                             {userAns === 'benar' ? 'Benar' : userAns === 'salah' ? 'Salah' : '-'}
                           </span>
                         </td>
-                        <td className="border border-gray-300 p-3 text-center">
+                        <td className="border border-border p-3 text-center">
                           <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                            correctAns === 'benar' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            correctAns === 'benar' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
                           }`}>
                             {correctAns === 'benar' ? 'Benar' : 'Salah'}
                           </span>
                         </td>
-                        <td className="border border-gray-300 p-3 text-center">
+                        <td className="border border-border p-3 text-center">
                           {isCorrect ? (
-                            <span className="text-green-600 text-xl">✓</span>
+                            <span className="text-green-600 dark:text-green-400 text-xl">✓</span>
                           ) : (
-                            <span className="text-red-600 text-xl">✗</span>
+                            <span className="text-red-600 dark:text-red-400 text-xl">✗</span>
                           )}
                         </td>
                       </tr>
@@ -411,24 +478,24 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
                     key={idx}
                     className={`p-3 rounded border-2 ${
                       isCorrectAnswer
-                        ? 'border-green-500 bg-green-50'
+                        ? 'border-green-500 bg-green-50 dark:border-green-600 dark:bg-green-950'
                         : isUserAnswer
-                        ? 'border-red-500 bg-red-50'
-                        : 'border-gray-200 bg-white'
+                        ? 'border-red-500 bg-red-50 dark:border-red-600 dark:bg-red-950'
+                        : 'border-border bg-card'
                     }`}
                   >
                     <div className="flex items-start">
                       <div className="flex-shrink-0 mr-3">
-                        {isCorrectAnswer && <span className="text-green-600 font-bold">✓</span>}
-                        {!isCorrectAnswer && isUserAnswer && <span className="text-red-600 font-bold">✗</span>}
+                        {isCorrectAnswer && <span className="text-green-600 dark:text-green-400 font-bold">✓</span>}
+                        {!isCorrectAnswer && isUserAnswer && <span className="text-red-600 dark:text-red-400 font-bold">✗</span>}
                       </div>
                       <div className="flex-1">
-                        <strong>{String.fromCharCode(65 + idx)}.</strong> {option}
+                        <strong className="text-foreground">{String.fromCharCode(65 + idx)}.</strong> <span className="text-foreground">{option}</span>
                         {isCorrectAnswer && (
-                          <span className="ml-2 text-green-600 text-sm font-medium">(Jawaban Benar)</span>
+                          <span className="ml-2 text-green-600 dark:text-green-400 text-sm font-medium">(Jawaban Benar)</span>
                         )}
                         {!isCorrectAnswer && isUserAnswer && (
-                          <span className="ml-2 text-red-600 text-sm font-medium">(Jawaban Anda)</span>
+                          <span className="ml-2 text-red-600 dark:text-red-400 text-sm font-medium">(Jawaban Anda)</span>
                         )}
                       </div>
                     </div>
@@ -439,21 +506,21 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
           )}
 
           {/* Explanation Section */}
-          <div className="border-t pt-6">
-            <h4 className="font-semibold text-lg mb-3 flex items-center">
+          <div className="border-t border-border pt-6">
+            <h4 className="font-semibold text-lg mb-3 flex items-center text-foreground">
               💡 Pembahasan
             </h4>
             {hasPaid ? (
-              <div className="bg-blue-50 p-4 rounded border border-blue-200">
-                <p className="text-gray-800">
+              <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded border border-blue-200 dark:border-blue-800">
+                <p className="text-foreground">
                   {currentQuestion.explanation || 'Pembahasan belum tersedia untuk soal ini.'}
                 </p>
               </div>
             ) : (
-              <div className="bg-gray-100 p-6 rounded border-2 border-dashed border-gray-300 text-center">
+              <div className="bg-muted p-6 rounded border-2 border-dashed border-border text-center">
                 <div className="text-4xl mb-3">🔒</div>
-                <h5 className="font-semibold text-gray-800 mb-2">Pembahasan Terkunci</h5>
-                <p className="text-gray-600 mb-4">
+                <h5 className="font-semibold text-foreground mb-2">Pembahasan Terkunci</h5>
+                <p className="text-muted-foreground mb-4">
                   Upgrade ke Premium untuk melihat pembahasan lengkap semua soal
                 </p>
                 <button
@@ -472,7 +539,7 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
           <button
             onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
             disabled={currentQuestionIndex === 0}
-            className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50 hover:bg-gray-400 transition-colors"
+            className="px-4 py-2 bg-secondary text-foreground rounded disabled:opacity-50 hover:bg-secondary/80 transition-colors"
           >
             ← Soal Sebelumnya
           </button>

@@ -1,38 +1,29 @@
-```gitignore
-# Dependencies
-node_modules/
-
-# Build outputs
+```
+# Compiled and build artifacts
+*.pyc
+__pycache__/
+*.o
+*.obj
 dist/
 build/
-.next/
-out/
+target/
 
-# Environment
-.env
-.env.local
-.env.*
-
-# Editor/IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*.tmp
-
-# Logs
-*.log
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+# Dependencies
+node_modules/
 venv/
 .venv/
 .env
 .env.local
+.env.*
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Editors
+.vscode/
+.idea/
 
 # Coverage
 coverage/
@@ -42,10 +33,10 @@ htmlcov/
 # System
 .DS_Store
 Thumbs.db
-```
 
-Wait, let me reconsider this. The file changes only show TypeScript/React files being modified (`app/tryout/[id]/page.tsx`, `app/tryout/layout.tsx`), which are source code files. There are no build artifacts, dependencies, or temp files in the changes. Following rule #6, since the changes contain only source files and no build artifacts, dependencies, or temp files, the output should be empty.
+# MyPy
+.mypy_cache/
 
-```gitignore
-
+# Pytest
+.pytest_cache/
 ```
