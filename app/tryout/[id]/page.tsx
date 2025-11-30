@@ -42,6 +42,20 @@ export default function TryoutPage() {
         return;
       }
 
+      // Get user profile to check role
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        router.push('/auth/login');
+        return;
+      }
+
+      // Get tryout data including start_time
       const { data: tryoutData, error: tryoutError } = await supabase
         .from('tryouts')
         .select('duration_minutes')
@@ -52,6 +66,26 @@ export default function TryoutPage() {
         alert('Tryout tidak ditemukan');
         router.push('/dashboard');
         return;
+      }
+
+      // Fetch tryout with start_time separately to handle backward compatibility
+      const { data: tryoutWithStartTime, error: tryoutWithStartTimeError } = await supabase
+        .from('tryouts')
+        .select('start_time')
+        .eq('id', tryoutId)
+        .single();
+
+      // Check access based on role and start_time if column exists
+      if (!tryoutWithStartTimeError && tryoutWithStartTime) {
+        const now = new Date();
+        const startTime = tryoutWithStartTime.start_time ? new Date(tryoutWithStartTime.start_time) : null;
+        
+        // If user is not admin and tryout has a start_time that hasn't passed yet, deny access
+        if (profileData?.role !== 'admin' && startTime && startTime > now) {
+          alert('Tryout ini belum tersedia. Silakan kembali pada waktu yang telah ditentukan.');
+          router.push('/dashboard');
+          return;
+        }
       }
 
       const totalSeconds = tryoutData.duration_minutes * 60;
