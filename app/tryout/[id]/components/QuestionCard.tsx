@@ -57,19 +57,29 @@ export default function QuestionCard({
           td: ({node, ...props}) => (
             <td className="border border-gray-300 dark:border-gray-600 px-3 py-2 dark:text-gray-200" {...props} />
           ),
-          tr: ({node, index, ...props}) => (
-            <tr
-              className={
-                index && index % 2 === 0
+          tr: ({node, ...props}) => {
+            const index = (props as any).index;
+            return (
+              <tr
+                className={index && index % 2 === 0
                   ? 'bg-white dark:bg-gray-800'
-                  : 'bg-gray-50 dark:bg-gray-750'
-              }
-              {...props}
-            />
-          ),
+                  : 'bg-gray-50 dark:bg-gray-750'}
+                {...props} />
+            );
+          },
           img: ({node, src, alt, ...props}) => {
-            const imageUrl = getImageUrl(src || '');
+            // Convert Blob to URL if needed
+            let imageSource: string | null = null;
+                    
+            if (typeof src === 'string') {
+              imageSource = src;
+            } else if (src instanceof Blob) {
+              imageSource = URL.createObjectURL(src);
+            }
+            
+            const imageUrl = getImageUrl(imageSource || '');
             if (!imageUrl) return null;
+            
             return (
               <img
                 src={imageUrl}
