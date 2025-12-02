@@ -162,6 +162,29 @@ if (allCorrect) score++;
 
 ---
 
+## 🛒 Payment Gateway Integration
+
+Sistem kini dilengkapi dengan integrasi payment gateway Duitku (sandbox) untuk pembayaran tryout:
+
+- **Endpoint Pembayaran:** `/api/duitku/create-payment`
+- **Endpoint Notifikasi:** `/api/duitku/notification`
+- **Endpoint Status Pembayaran:** `/api/duitku/payment-status`
+- **Halaman Contoh:** `/payment`
+- **Komponen Pembayaran:** `<DuitkuPaymentButton />`
+
+### Kompatibilitas Mode Gelap
+Tampilan pembayaran telah dioptimalkan untuk mode gelap menggunakan Tailwind CSS. Pastikan aplikasi Anda menggunakan konfigurasi berikut:
+
+```js
+// tailwind.config.js
+module.exports = {
+  darkMode: 'class', // atau 'media' tergantung preferensi Anda
+  // ... konfigurasi lainnya
+}
+```
+
+---
+
 ## ✅ Checklist Implementasi
 
 - [x] Admin page - form input
@@ -172,6 +195,8 @@ if (allCorrect) score++;
 - [x] Review page - display hasil
 - [x] Validasi form
 - [x] Styling & UX
+- [x] Payment Gateway Integration
+- [x] Dark Mode Compatibility
 
 ---
 

@@ -77,15 +77,15 @@ const DuitkuPaymentButton: React.FC<DuitkuPaymentProps> = ({
         disabled={loading}
         className={`px-6 py-3 rounded-md font-medium text-white ${
           loading 
-            ? 'bg-gray-400 cursor-not-allowed' 
-            : 'bg-green-600 hover:bg-green-700'
+            ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed' 
+            : 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800'
         } transition-colors`}
       >
         {loading ? 'Processing...' : `Pay Rp ${amount.toLocaleString()}`}
       </button>
       
       {error && (
-        <div className="mt-2 p-2 bg-red-100 text-red-700 rounded-md text-sm">
+        <div className="mt-2 p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-md text-sm">
           {error}
         </div>
       )}

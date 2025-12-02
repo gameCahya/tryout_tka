@@ -17,6 +17,17 @@ DUITKU_BASE_URL=https://sandbox.duitku.com
 
 Ganti `your_merchant_code_here` dan `your_api_key_here` dengan kredensial sebenarnya dari akun sandbox Duitku Anda.
 
+### 3. Kompatibilitas Mode Gelap
+Komponen dan halaman pembayaran telah dirancang untuk kompatibel dengan mode gelap. Pastikan aplikasi Anda mendukung mode gelap menggunakan Tailwind CSS dengan konfigurasi class strategy:
+
+```js
+// tailwind.config.js
+module.exports = {
+  darkMode: 'class', // atau 'media' tergantung preferensi Anda
+  // ... konfigurasi lainnya
+}
+```
+
 ## Struktur File
 
 - `/lib/duitku.ts` - Konfigurasi dan kelas utama Duitku
