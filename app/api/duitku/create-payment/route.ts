@@ -3,6 +3,22 @@ import DuitkuPayment from '@/lib/duitku';
 
 export async function POST(request: NextRequest) {
   try {
+    // Validate environment variables first
+    if (!process.env.DUITKU_MERCHANT_CODE || !process.env.DUITKU_API_KEY) {
+      return new Response(
+        JSON.stringify({ 
+          error: true, 
+          message: 'Duitku environment variables are not properly configured. Please set DUITKU_MERCHANT_CODE and DUITKU_API_KEY.' 
+        }),
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    }
+
     const duitku = new DuitkuPayment();
     
     const body = await request.json();

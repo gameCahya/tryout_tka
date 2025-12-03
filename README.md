@@ -183,6 +183,37 @@ module.exports = {
 }
 ```
 
+### Troubleshooting: "Unexpected token 'T', "The resour"..." Error
+
+Jika Anda mengalami error seperti ini saat pembayaran:
+
+```
+Payment failed: Unexpected token 'T', "The resour"... is not valid JSON
+```
+
+Ini biasanya disebabkan oleh beberapa hal berikut:
+
+1. **Environment variables belum diset**:
+   - Pastikan `DUITKU_MERCHANT_CODE` dan `DUITKU_API_KEY` sudah diisi di file `.env.local`
+   - Contoh:
+   ```
+   DUITKU_MERCHANT_CODE=your_merchant_code_here
+   DUITKU_API_KEY=your_api_key_here
+   DUITKU_BASE_URL=https://sandbox.duitku.com
+   ```
+
+2. **Kredensial tidak valid**:
+   - Pastikan Anda menggunakan kredensial sandbox Duitku yang valid
+   - Kredensial bisa didapatkan dari dashboard Duitku Sandbox
+
+3. **Endpoint API tidak ditemukan**:
+   - Pastikan Anda menggunakan URL API yang benar
+   - Di lingkungan sandbox, gunakan `https://sandbox.duitku.com`
+
+4. **Koneksi jaringan**:
+   - Pastikan server dapat mengakses API Duitku
+   - Cek firewall atau pemblokir jaringan yang mungkin menghalangi permintaan
+
 ---
 
 ## ✅ Checklist Implementasi
