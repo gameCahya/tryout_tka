@@ -108,10 +108,23 @@ class DuitkuPayment {
         body: JSON.stringify(paymentData),
       });
 
+      // Check if response is ok before parsing JSON
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Duitku API error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText.substring(0, 200)}`);
+      }
+
       const result = await response.json();
       return result;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Duitku payment creation error:', error);
+      
+      // Handle the case where response is not JSON
+      if (error.message && error.message.includes('Unexpected token')) {
+        throw new Error('Received invalid response from Duitku API. This might be an HTML error page. Please check your Duitku configuration and credentials.');
+      }
+      
       throw error;
     }
   }
@@ -151,10 +164,23 @@ class DuitkuPayment {
         body: JSON.stringify(statusData),
       });
 
+      // Check if response is ok before parsing JSON
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Duitku API error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText.substring(0, 200)}`);
+      }
+
       const result = await response.json();
       return result;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Duitku payment status error:', error);
+      
+      // Handle the case where response is not JSON
+      if (error.message && error.message.includes('Unexpected token')) {
+        throw new Error('Received invalid response from Duitku API. This might be an HTML error page. Please check your Duitku configuration and credentials.');
+      }
+      
       throw error;
     }
   }

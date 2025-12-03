@@ -46,6 +46,24 @@ const DuitkuPaymentButton: React.FC<DuitkuPaymentProps> = ({
         }),
       });
 
+      // Check if the response is ok before parsing JSON
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API error response:', errorText);
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          // Try to parse as JSON in case it's a proper error response
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorJson.error || errorMessage;
+        } catch (e) {
+          // If it's not JSON, use the raw text or a default message
+          errorMessage = errorText.startsWith('<') ? 
+            'Received HTML error page from server. Check your API endpoint configuration.' : 
+            errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
       const result = await response.json();
 
       if (result.paymentUrl) {
