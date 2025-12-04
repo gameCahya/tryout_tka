@@ -55,6 +55,8 @@ Thumbs.db
 /out/
 /.next/dev
 .next
+./next
+
 
 # Coverage
 coverage/

@@ -33,6 +33,8 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
   const router = useRouter();
   const [resultId, setResultId] = useState<string>('');
   const [tryoutId, setTryoutId] = useState<string>('');
+  const [userId, setUserId] = useState<string>('');
+  const [userEmail, setUserEmail] = useState<string>('');
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [userAnswers, setUserAnswers] = useState<Map<string, UserAnswer>>(new Map());
@@ -40,8 +42,74 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
   const [loading, setLoading] = useState(true);
   const [hasPaid, setHasPaid] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [pendingPaymentUrl, setPendingPaymentUrl] = useState<string | null>(null);
 
-  // Resolve params first
+  const rememberPaymentContext = (
+    merchantOrderId: string | null | undefined,
+    paymentUrl?: string | null,
+    fallbackTryoutId?: string
+  ) => {
+    if (!merchantOrderId || typeof window === 'undefined') return;
+    if (!resultId) return;
+
+    const context = {
+      merchantOrderId,
+      paymentUrl: paymentUrl || null,
+      tryoutId: result?.tryout_id || tryoutId || fallbackTryoutId || '',
+      resultId,
+      reviewPath: `/history/${resultId}/review`,
+    };
+
+    try {
+      sessionStorage.setItem('lastPaymentContext', JSON.stringify(context));
+    } catch (err) {
+      console.warn('Unable to persist payment context:', err);
+    }
+  };
+
+  const clearPaymentContext = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('lastPaymentContext');
+    }
+    setPendingPaymentUrl(null);
+  };
+
+  const checkPaymentStatus = async (tryoutId: string, userId: string) => {
+    try {
+      console.log('Checking payment status for:', { tryoutId, userId });
+      
+      const response = await fetch(`/api/payment/check-status?tryoutId=${tryoutId}&userId=${userId}`);
+      
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      
+      if (!response.ok) {
+        console.error('Payment status check failed:', response.status);
+        return { hasAccess: false, pendingPaymentUrl: null, pendingMerchantOrderId: null };
+      }
+
+      const text = await response.text();
+      console.log('Response text:', text);
+      
+      if (!text) {
+        console.error('Empty response from payment status check');
+        return { hasAccess: false, pendingPaymentUrl: null, pendingMerchantOrderId: null };
+      }
+
+      const data = JSON.parse(text);
+      console.log('Parsed data:', data);
+      return {
+        hasAccess: data.hasAccess || false,
+        pendingPaymentUrl: data.pendingPaymentUrl || null,
+        pendingMerchantOrderId: data.pendingMerchantOrderId || null,
+      };
+    } catch (error) {
+      console.error('Error checking payment status:', error);
+      return { hasAccess: false, pendingPaymentUrl: null, pendingMerchantOrderId: null };
+    }
+  };
+
   useEffect(() => {
     const resolveParams = async () => {
       const resolvedParams = await params;
@@ -55,7 +123,6 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
   }, [params, searchParams]);
 
   useEffect(() => {
-    // Skip if params not resolved yet
     if (!resultId || !tryoutId) return;
 
     const fetchReviewData = async () => {
@@ -65,7 +132,10 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
         return;
       }
 
-      // Ambil hasil tryout
+      setUserId(session.user.id);
+      setUserEmail(session.user.email || '');
+
+      // Fetch result data first
       const { data: resultData, error: resultError } = await supabase
         .from('results')
         .select('id, tryout_id, user_id, score, total_questions, duration_seconds, completed_at')
@@ -85,7 +155,18 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
         return;
       }
 
-      // Ambil tryout title secara terpisah
+      // Check payment status after getting resultData
+      const paymentStatus = await checkPaymentStatus(resultData.tryout_id, session.user.id);
+      setHasPaid(paymentStatus.hasAccess || false);
+      if (paymentStatus.hasAccess) {
+        clearPaymentContext();
+      } else if (paymentStatus.pendingPaymentUrl) {
+        setPendingPaymentUrl(paymentStatus.pendingPaymentUrl);
+        rememberPaymentContext(paymentStatus.pendingMerchantOrderId, paymentStatus.pendingPaymentUrl, resultData.tryout_id);
+      } else {
+        setPendingPaymentUrl(null);
+      }
+
       const { data: tryoutData, error: tryoutError } = await supabase
         .from('tryouts')
         .select('title')
@@ -96,13 +177,11 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
         console.error('Error fetching tryout:', tryoutError);
       }
 
-      // Set result dengan tryout title
       setResult({
         ...resultData,
         tryouts: { title: tryoutData?.title || 'Tryout' }
       });
 
-      // Ambil soal-soal
       const actualTryoutId = tryoutId || resultData.tryout_id;
       const { data: questionsData, error: questionsError } = await supabase
         .from('questions')
@@ -125,7 +204,6 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
 
       setQuestions(questionsData);
 
-      // Ambil jawaban user dari database
       const { data: userAnswersData, error: answersError } = await supabase
         .from('user_answers')
         .select('*')
@@ -135,11 +213,9 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
         console.error('Error fetching user answers:', answersError);
       }
 
-      // Build user answers map dari database
       const answersMap = new Map<string, UserAnswer>();
       
       if (userAnswersData && userAnswersData.length > 0) {
-        // Dari database
         userAnswersData.forEach((ans: any) => {
           answersMap.set(ans.question_id, {
             question_id: ans.question_id,
@@ -150,7 +226,6 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
           });
         });
       } else {
-        // Fallback ke localStorage jika tidak ada di database
         const savedAnswers = localStorage.getItem(`tryout_${actualTryoutId}_answers`);
         const savedMultipleAnswers = localStorage.getItem(`tryout_${actualTryoutId}_multiple_answers`);
         const savedReasoningAnswers = localStorage.getItem(`tryout_${actualTryoutId}_reasoning_answers`);
@@ -195,15 +270,69 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
       }
 
       setUserAnswers(answersMap);
-
-      // TODO: Check payment status dari database
-      setHasPaid(false);
-
       setLoading(false);
     };
 
     fetchReviewData();
   }, [resultId, tryoutId, router]);
+
+  const handleUnlockPayment = async () => {
+    if (processingPayment) return;
+    
+    setProcessingPayment(true);
+    
+    try {
+      const response = await fetch('/api/payment/create-invoice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tryoutId: result.tryout_id,
+          userId,
+          email: userEmail,
+          customerName: userEmail.split('@')[0],
+        }),
+      });
+
+      const text = await response.text();
+      console.log('Response text:', text);
+
+      if (!text) {
+        alert('Response kosong dari server');
+        setProcessingPayment(false);
+        return;
+      }
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error('Failed to parse response:', text);
+        alert('Terjadi kesalahan pada response server');
+        setProcessingPayment(false);
+        return;
+      }
+
+      if (data.success && data.paymentUrl) {
+        rememberPaymentContext(data.merchantOrderId, data.paymentUrl, result?.tryout_id || tryoutId);
+        // Redirect to Duitku payment page
+        window.location.href = data.paymentUrl;
+      } else if (data.pendingPayment && data.paymentUrl) {
+        rememberPaymentContext(data.merchantOrderId, data.paymentUrl, result?.tryout_id || tryoutId);
+        // Ada pembayaran yang sedang diproses, simpan URL-nya
+        setPendingPaymentUrl(data.paymentUrl);
+        setProcessingPayment(false);
+      } else {
+        alert('Gagal membuat invoice pembayaran: ' + (data.error || 'Unknown error'));
+        setProcessingPayment(false);
+      }
+    } catch (error) {
+      console.error('Error creating payment:', error);
+      alert('Terjadi kesalahan saat memproses pembayaran');
+      setProcessingPayment(false);
+    }
+  };
 
   const getImageUrl = (url: string | null | undefined): string | null => {
     if (!url) return null;
@@ -213,7 +342,6 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
   };
 
   const renderQuestionText = (text: string) => {
-    // Simple render - bisa diexpand seperti di tryout page
     const parts = text.split(/!\[([^\]]*)\]\(([^)]+)\)/g);
     return parts.map((part, index) => {
       if (index % 3 === 2) {
@@ -304,7 +432,6 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
 
         {/* Question Review */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          {/* Status Badge */}
           <div className="mb-4">
             {userAnswer?.is_correct ? (
               <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
@@ -327,7 +454,6 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
             )}
           </div>
 
-          {/* Question */}
           <div className="mb-4">
             <h3 className="text-lg font-semibold mb-2">Soal {currentQuestionIndex + 1}</h3>
             {currentQuestion.image_url && (
@@ -340,9 +466,7 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
             <div className="text-gray-800">{renderQuestionText(currentQuestion.question_text)}</div>
           </div>
 
-          {/* Options */}
           {isReasoning ? (
-            // Reasoning Type - Show table with correct/user answers
             <div className="overflow-x-auto mb-6">
               <table className="w-full border-collapse border border-gray-300">
                 <thead className="bg-gray-100">
@@ -398,7 +522,6 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
               </table>
             </div>
           ) : (
-            // Regular options (Single or Multiple)
             <div className="space-y-2 mb-6">
               {currentQuestion.options.map((option, idx) => {
                 const isUserAnswer = isMultiple
@@ -445,22 +568,59 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
             </h4>
             {hasPaid ? (
               <div className="bg-blue-50 p-4 rounded border border-blue-200">
-                <p className="text-gray-800">
+                <p className="text-gray-800 whitespace-pre-line">
                   {currentQuestion.explanation || 'Pembahasan belum tersedia untuk soal ini.'}
                 </p>
               </div>
-            ) : (
-              <div className="bg-gray-100 p-6 rounded border-2 border-dashed border-gray-300 text-center">
-                <div className="text-4xl mb-3">🔒</div>
-                <h5 className="font-semibold text-gray-800 mb-2">Pembahasan Terkunci</h5>
-                <p className="text-gray-600 mb-4">
-                  Upgrade ke Premium untuk melihat pembahasan lengkap semua soal
+            ) : pendingPaymentUrl ? (
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-lg border-2 border-blue-300 text-center">
+                <div className="text-5xl mb-3">⏳</div>
+                <h5 className="font-bold text-gray-900 mb-2 text-xl">Pembayaran Sedang Diproses</h5>
+                <p className="text-gray-700 mb-4">
+                  Anda memiliki pembayaran yang sedang menunggu konfirmasi. Klik tombol di bawah untuk melanjutkan pembayaran.
                 </p>
                 <button
-                  onClick={() => alert('Fitur pembayaran sedang dalam proses (Midtrans)')}
-                  className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-6 py-2 rounded-lg hover:from-yellow-600 hover:to-orange-600 transition-all font-medium"
+                  onClick={() => window.location.href = pendingPaymentUrl}
+                  className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-8 py-3 rounded-lg hover:from-blue-600 hover:to-indigo-600 transition-all font-bold text-lg shadow-lg"
                 >
-                  🎓 Unlock Pembahasan Premium
+                  💳 Lanjutkan Pembayaran
+                </button>
+                <button
+                  onClick={() => {
+                    setPendingPaymentUrl(null);
+                    handleUnlockPayment();
+                  }}
+                  className="mt-3 text-gray-600 hover:text-gray-800 text-sm underline"
+                >
+                  Buat Invoice Baru
+                </button>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-br from-yellow-50 to-orange-50 p-6 rounded-lg border-2 border-yellow-300 text-center">
+                <div className="text-5xl mb-3">🔒</div>
+                <h5 className="font-bold text-gray-900 mb-2 text-xl">Pembahasan Terkunci</h5>
+                <p className="text-gray-700 mb-2">
+                  Unlock pembahasan lengkap untuk <strong>semua hasil tryout ini</strong>
+                </p>
+                <p className="text-2xl font-bold text-orange-600 mb-4">
+                  Rp 15.000
+                </p>
+                <p className="text-sm text-gray-600 mb-4">
+                  💳 Pembayaran aman melalui Duitku (ShopeePay, QRIS, dll)
+                </p>
+                <button
+                  onClick={handleUnlockPayment}
+                  disabled={processingPayment}
+                  className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-8 py-3 rounded-lg hover:from-yellow-600 hover:to-orange-600 transition-all font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {processingPayment ? (
+                    <span className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      Memproses...
+                    </span>
+                  ) : (
+                    '🎓 Unlock Pembahasan Sekarang'
+                  )}
                 </button>
               </div>
             )}
