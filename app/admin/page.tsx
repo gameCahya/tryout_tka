@@ -44,7 +44,7 @@ export default function AdminPage() {
         .eq('id', session.user.id)
         .single();
 
-      if (error || profile.role !== 'admin') {
+      if (error || !['admin', 'teacher'].includes(profile.role)) {
         alert('Akses ditolak');
         router.push('/dashboard');
         return;

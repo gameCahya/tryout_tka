@@ -31,6 +31,8 @@ export default function DashboardPage() {
       // Redirect based on role
       if (profileData.role === 'admin') {
         router.push('/dashboard/admin');
+      } else if (profileData.role === 'teacher') {
+        router.push('/dashboard/teacher');
       } else {
         router.push('/dashboard/user');
       }
