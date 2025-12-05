@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { SimpleQuestionForm } from '@/components/admin/SimpleQuestionForm';
-import { SimpleQuestionList } from '@/components/admin/SimpleQuestionList';
+import  SimpleQuestionForm  from '@/components/admin/SimpleQuestionForm';
+import  SimpleQuestionList  from '@/components/admin/SimpleQuestionList';
 
 type Tryout = {
   id: string;
