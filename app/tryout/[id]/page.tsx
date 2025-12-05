@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Question } from '../types/tryout';
-import TryoutHeader from './components/TryoutHeader';
-import ProgressBar from './components/ProgressBar';
-import QuestionNavigator from './components/QuestionNavigator';
-import QuestionCard from './components/QuestionCard';
-import NavigationButtons from './components/NavigationButtons';
+import { Question } from '@/types/tryout';
+import TryoutHeader from '@/components/tryout/TryoutHeader';
+import ProgressBar from '@/components/tryout/ProgressBar';
+import QuestionNavigator from '@/components/tryout/QuestionNavigator';
+import QuestionCard from '@/components/tryout/QuestionCard';
+import NavigationButtons from '@/components/tryout/NavigationButtons';
 
 export default function TryoutPage() {
   const params = useParams();
