@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Fonnte } from '@/lib/fonnte';
 
 export async function POST(request: NextRequest) {
   try {
-    const { phone, fullName } = await request.json();
+    const body = await request.json();
+    const { phone, fullName, isNotification, registrationData } = body;
 
-    if (!phone || !fullName) {
+    if (!phone) {
       return NextResponse.json(
-        { error: 'Phone dan fullName wajib diisi' },
+        { error: 'Phone wajib diisi' },
         { status: 400 }
       );
     }
@@ -19,8 +21,21 @@ export async function POST(request: NextRequest) {
       formattedPhone = '62' + formattedPhone;
     }
 
-    // Pesan yang akan dikirim
-    const message = `Halo ${fullName}! 👋
+    let message = '';
+    
+    if (isNotification && registrationData) {
+      // Pesan notifikasi untuk admin
+      const { fullName: registrantName, phone: registrantPhone, school: registrantSchool } = registrationData;
+      message = `🔔 NOTIFIKASI PENDAFTARAN BARU 🔔
+
+Nama: ${registrantName}
+Nomor HP: ${registrantPhone}
+Asal Sekolah: ${registrantSchool}
+
+Seseorang telah mendaftar di platform Anda!`;
+    } else {
+      // Pesan selamat datang untuk user
+      message = `Halo ${fullName}! 👋
 
 Selamat datang di platform Try Out kami! 🎓
 
@@ -29,35 +44,27 @@ Terima kasih telah mendaftar. Akun Anda telah berhasil dibuat dan siap digunakan
 Silakan login untuk mulai mengikuti try out dan meningkatkan kemampuan Anda.
 
 Semangat belajar! 💪`;
+    }
 
-    // Kirim ke Fonnte API
-    const response = await fetch('https://api.fonnte.com/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': process.env.FONNTE_API_KEY || '', // Simpan API key di .env
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        target: formattedPhone,
-        message: message,
-        countryCode: '62', // Kode negara Indonesia
-      }),
+    // Kirim ke Fonnte API menggunakan kelas Fonnte
+    const result = await Fonnte.sendWA({
+      target: formattedPhone,
+      message: message,
+      country_code: '62',
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('Fonnte API Error:', data);
+    if (!result.success) {
+      console.error('Fonnte API Error:', result.error, result.data);
       return NextResponse.json(
-        { error: 'Gagal mengirim WhatsApp', details: data },
-        { status: response.status }
+        { error: 'Gagal mengirim WhatsApp', details: result.error },
+        { status: 500 }
       );
     }
 
     return NextResponse.json({ 
       success: true, 
       message: 'WhatsApp berhasil dikirim',
-      data 
+      data: result.data 
     });
 
   } catch (error: any) {

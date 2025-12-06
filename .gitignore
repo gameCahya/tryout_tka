@@ -2,64 +2,69 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+.npm/
 .yarn/
 .yarn-cache/
-# Build artifacts
+
+# Build outputs
 dist/
 build/
 .next/
+.nuxt/
 out/
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
-.venv/
+public/build/
+*.bundle.js
+*.min.js
+*.map
+
 # Logs
 *.log
-# Environment variables
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
 .env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
 .env.*
-# Editor files
+
+# Editor
 .vscode/
 .idea/
 *.swp
 *.swo
-# OS generated files
+*~
+
+# OS
 .DS_Store
 Thumbs.db
-# Coverage reports
+
+# Coverage
 coverage/
-htmlcov/
-.coverage
-# Test files
-*.pytest_cache/
-.mypy_cache/
-# Compressed files
-*.zip
-*.gz
-*.tar
-*.tgz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
-*.lz4
-*.lzh
-*.cab
-*.arj
-*.rpm
-*.deb
-*.Z
-*.lz
-*.lzo
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
+.nyc_output/
+istanbul/
+*.lcov
+
+# TypeScript
+*.tsbuildinfo
+*.js.map
+*.d.ts
+
+# Next.js
+.next/
+out/
+```
+
+Wait, let me reconsider the file changes. The changes are only:
+
+- Added: `lib/fonnte.ts`
+- Modified: `README.md`, `app/api/send-wa/route.ts`, `app/auth/register/page.tsx`
+
+These are all source code and config files. No build artifacts, dependencies, or temp files are in the change list.
+
+```
+
 ```

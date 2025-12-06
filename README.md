@@ -137,6 +137,25 @@ Menampilkan:
 
 ---
 
+## 📲 Notifikasi WhatsApp Otomatis
+
+Sistem ini dilengkapi dengan fitur notifikasi WhatsApp otomatis:
+
+### Pendaftaran User
+- Saat user mendaftar di `/auth/register`, sistem akan:
+  1. Mengirim pesan selamat datang ke user yang mendaftar
+  2. Mengirim notifikasi pendaftaran baru ke admin
+
+### Konfigurasi
+- `FONNTE_API_KEY`: API key dari Fonnte untuk mengirim WhatsApp
+- `ADMIN_PHONE`: Nomor WhatsApp admin untuk menerima notifikasi pendaftaran
+
+### Endpoint API
+- `/api/send-wa`: Endpoint untuk mengirim pesan WhatsApp melalui Fonnte API
+- Mendukung dua jenis pesan: selamat datang (untuk user) dan notifikasi (untuk admin)
+
+---
+
 ## 📊 Scoring Logic
 
 ```javascript
@@ -172,6 +191,7 @@ if (allCorrect) score++;
 - [x] Review page - display hasil
 - [x] Validasi form
 - [x] Styling & UX
+- [x] WhatsApp notifications
 
 ---
 

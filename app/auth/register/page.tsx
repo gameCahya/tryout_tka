@@ -27,7 +27,7 @@ export default function RegisterPage() {
     return num;
   };
 
-  // Fungsi untuk mengirim WhatsApp
+  // Fungsi untuk mengirim WhatsApp selamat datang ke user
   const sendWelcomeWA = async (phone: string, fullName: string) => {
     try {
       const response = await fetch('/api/send-wa', {
@@ -41,12 +41,40 @@ export default function RegisterPage() {
       const data = await response.json();
       
       if (!response.ok) {
-        console.error('Gagal mengirim WA:', data);
+        console.error('Gagal mengirim WA ke user:', data);
       } else {
-        console.log('WhatsApp berhasil dikirim:', data);
+        console.log('WhatsApp selamat datang berhasil dikirim ke user:', data);
       }
     } catch (error) {
-      console.error('Error sending WhatsApp:', error);
+      console.error('Error sending WhatsApp to user:', error);
+    }
+  };
+
+  // Fungsi untuk mengirim notifikasi pendaftaran ke admin
+  const sendRegistrationNotification = async (fullName: string, phone: string, school: string) => {
+    try {
+      const response = await fetch('/api/send-wa', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          phone: process.env.ADMIN_PHONE || '', // Nomor admin dari environment
+          fullName: 'Admin', // Untuk keperluan format pesan
+          isNotification: true,
+          registrationData: { fullName, phone, school }
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('Gagal mengirim notifikasi admin:', data);
+      } else {
+        console.log('Notifikasi pendaftaran berhasil dikirim ke admin:', data);
+      }
+    } catch (error) {
+      console.error('Error sending registration notification:', error);
     }
   };
 
@@ -107,8 +135,11 @@ export default function RegisterPage() {
 
       if (profileError) throw profileError;
 
-      // 4. Kirim WhatsApp selamat datang
+      // 4. Kirim WhatsApp selamat datang ke user
       await sendWelcomeWA(cleanPhoneNum, fullName);
+
+      // 5. Kirim notifikasi pendaftaran ke admin
+      await sendRegistrationNotification(fullName, cleanPhoneNum, school);
 
       // Redirect
       router.push('/dashboard');
