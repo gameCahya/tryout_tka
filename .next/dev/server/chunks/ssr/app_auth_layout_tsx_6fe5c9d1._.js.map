@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///home/bangcs/Documents/tryout_tka/app/auth/layout.tsx"],"sourcesContent":["// app/layout.tsx (atau buat wrapper khusus)\n\nimport { Suspense } from 'react';\n\nexport default function RootLayout({\n  children,\n}: {\n  children: React.ReactNode;\n}) {\n  return (\n    <html lang=\"en\">\n      <body suppressHydrationWarning>\n        <Suspense fallback={<div>Loading...</div>}>\n          {children}\n        </Suspense>\n      </body>\n    </html>\n  );\n}"],"names":[],"mappings":"AAAA,4CAA4C;;;;;;AAE5C;;;AAEe,SAAS,WAAW,EACjC,QAAQ,EAGT;IACC,qBACE,+YAAC;QAAK,MAAK;kBACT,cAAA,+YAAC;YAAK,wBAAwB;sBAC5B,cAAA,+YAAC,kXAAQ;gBAAC,wBAAU,+YAAC;8BAAI;;;;;;0BACtB;;;;;;;;;;;;;;;;AAKX","debugId":null}}]
+}

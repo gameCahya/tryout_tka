@@ -1,8 +1,27 @@
+// ============================================
+// app/dashboard/admin/page.tsx
+// ============================================
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+
+// Layout Components
+import { DashboardContainer } from '@/components/layout/DashboardContainer';
+import { DashboardHeader } from '@/components/layout/DashboardHeader';
+import { StatsGrid } from '@/components/layout/StatsGrid';
+import { GridLayout } from '@/components/layout/GridLayout';
+import { Section } from '@/components/layout/Section';
+
+// Dashboard Components
+import { ProfileCard } from '@/components/dashboard/ProfileCard';
+import { TryoutList } from '@/components/dashboard/TryoutList';
+import { UserCard } from '@/components/dashboard/UserCard';
+
+// Common Components
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { EmptyState } from '@/components/common/EmptyState';
 
 type Profile = {
   full_name: string;
@@ -17,6 +36,7 @@ type Tryout = {
   total_questions: number;
   duration_minutes: number;
   created_at: string;
+  teacher_id?: string;
 };
 
 type User = {
@@ -27,58 +47,90 @@ type User = {
   role: string;
 };
 
+type TryoutWithStats = Tryout & {
+  student_count: number;
+};
+
 export default function AdminDashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [tryouts, setTryouts] = useState<Tryout[]>([]);
+  const [tryouts, setTryouts] = useState<TryoutWithStats[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      // Check session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push('/auth/login');
-        return;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          router.push('/auth/login');
+          return;
+        }
+
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('full_name, phone, school, role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profileError || !profileData || profileData.role !== 'admin') {
+          router.push('/dashboard/user');
+          return;
+        }
+
+        setProfile(profileData);
+
+        // Fetch tryouts
+        const { data: tryoutsData, error: tryoutsError } = await supabase
+          .from('tryouts')
+          .select('id, title, total_questions, duration_minutes, created_at, teacher_id')
+          .order('created_at', { ascending: false });
+
+        if (!tryoutsError && tryoutsData) {
+          const tryoutIds = tryoutsData.map(t => t.id);
+          
+          if (tryoutIds.length > 0) {
+            const { data: resultsData } = await supabase
+              .from('results')
+              .select('tryout_id, user_id')
+              .in('tryout_id', tryoutIds);
+
+            if (resultsData) {
+              const studentCounts = resultsData.reduce((acc, result) => {
+                if (!acc[result.tryout_id]) {
+                  acc[result.tryout_id] = new Set();
+                }
+                acc[result.tryout_id].add(result.user_id);
+                return acc;
+              }, {} as Record<string, Set<string>>);
+
+              const tryoutsWithStats: TryoutWithStats[] = tryoutsData.map(tryout => ({
+                ...tryout,
+                student_count: studentCounts[tryout.id]?.size || 0,
+              }));
+
+              setTryouts(tryoutsWithStats);
+            }
+          } else {
+            setTryouts([]);
+          }
+        }
+
+        // Fetch users
+        const { data: usersData, error: usersError } = await supabase
+          .from('profiles')
+          .select('id, full_name, phone, school, role')
+          .order('created_at', { ascending: false });
+
+        if (!usersError) {
+          setUsers(usersData || []);
+        }
+
+        setLoading(false);
+      } catch (error) {
+        console.error('Error:', error);
+        setLoading(false);
       }
-
-      // Check if user is an admin
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('full_name, phone, school, role')
-        .eq('id', session.user.id)
-        .single();
-
-      if (profileError || !profileData || profileData.role !== 'admin') {
-        router.push('/dashboard/user'); // Redirect non-admin to user dashboard
-        return;
-      }
-
-      // Fetch tryout list
-      const { data: tryoutsData, error: tryoutsError } = await supabase
-        .from('tryouts')
-        .select('id, title, total_questions, duration_minutes, created_at')
-        .order('created_at', { ascending: false });
-
-      if (tryoutsError) {
-        console.error('Error fetching tryouts:', tryoutsError);
-      }
-
-      // Fetch user list
-      const { data: usersData, error: usersError } = await supabase
-        .from('profiles')
-        .select('id, full_name, phone, school, role')
-        .order('created_at', { ascending: false });
-
-      if (usersError) {
-        console.error('Error fetching users:', usersError);
-      }
-
-      setProfile(profileData);
-      setTryouts(tryoutsData || []);
-      setUsers(usersData || []);
-      setLoading(false);
     };
 
     fetchDashboardData();
@@ -89,253 +141,123 @@ export default function AdminDashboardPage() {
     router.push('/auth/login');
   };
 
+  // Prepare stats
+  const stats = [
+    {
+      title: 'Total Tryout',
+      value: tryouts.length,
+      subtitle: 'Tryout yang tersedia',
+      icon: '📝',
+      gradient: 'purple' as const,
+    },
+    {
+      title: 'Total Pengguna',
+      value: users.length,
+      subtitle: 'Pengguna terdaftar',
+      icon: '👥',
+      gradient: 'indigo' as const,
+    },
+    {
+      title: 'Soal Tersedia',
+      value: tryouts.reduce((acc, t) => acc + t.total_questions, 0),
+      subtitle: 'Total soal di semua tryout',
+      icon: '📚',
+      gradient: 'green' as const,
+    },
+    {
+      title: 'Total Durasi',
+      value: tryouts.reduce((acc, t) => acc + t.duration_minutes, 0),
+      subtitle: 'Menit pengerjaan',
+      icon: '⏱️',
+      gradient: 'blue' as const,
+    },
+  ];
+
+  // Prepare header actions
+  const headerActions = [
+    {
+      icon: '⚙️',
+      label: 'Admin Panel',
+      onClick: () => router.push('/admin'),
+      color: 'purple' as const,
+    },
+    {
+      icon: '📚',
+      label: 'History',
+      onClick: () => router.push('/history'),
+      color: 'blue' as const,
+    },
+    {
+      icon: '🚪',
+      label: 'Logout',
+      onClick: handleLogout,
+      color: 'red' as const,
+    },
+  ];
+
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Memuat dashboard..." />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 transition-colors">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 py-4 border-b border-gray-200 dark:border-gray-700">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-              Dashboard Admin
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Selamat datang, Administrator! 👋
-            </p>
-          </div>
-          
-          <div className="flex flex-wrap gap-2 md:gap-3">
-            <button
-              onClick={() => router.push('/admin')}
-              className="flex items-center gap-2 bg-purple-600 dark:bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors text-sm md:text-base"
-            >
-              <span>⚙️</span>
-              <span>Admin Panel</span>
-            </button>
-            
-            <button
-              onClick={() => router.push('/history')}
-              className="flex items-center gap-2 bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors text-sm md:text-base"
-            >
-              <span>📚</span>
-              <span>History</span>
-            </button>
-            
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 bg-red-600 dark:bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors text-sm md:text-base"
-            >
-              <span>🚪</span>
-              <span>Logout</span>
-            </button>
-          </div>
-        </header>
+    <DashboardContainer maxWidth="xl">
+      {/* Header */}
+      <DashboardHeader
+        title="Dashboard Admin"
+        subtitle="Selamat datang, Administrator! 👋"
+        actions={headerActions}
+      />
 
-        {/* Admin Profile Card */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 mb-8 transition-colors">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xl font-bold">
-              {profile?.full_name?.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                {profile?.full_name}
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Administrator
-              </p>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">No HP</p>
-              <p className="font-medium text-gray-900 dark:text-white">{profile?.phone}</p>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Sekolah</p>
-              <p className="font-medium text-gray-900 dark:text-white">{profile?.school}</p>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Akses</p>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <p className="font-medium text-green-600 dark:text-green-400">Admin</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Profile Card */}
+      {profile && (
+        <ProfileCard
+          name={profile.full_name}
+          role="Administrator"
+          phone={profile.phone}
+          school={profile.school}
+          roleColor="green"
+        />
+      )}
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 p-6 rounded-xl shadow-lg text-white">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-purple-100">Total Tryout</p>
-              <span className="text-2xl">📝</span>
-            </div>
-            <p className="text-3xl font-bold">{tryouts.length}</p>
-            <p className="text-sm text-purple-100 mt-1">Tryout yang tersedia</p>
-          </div>
-          
-          <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 dark:from-indigo-600 dark:to-indigo-700 p-6 rounded-xl shadow-lg text-white">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-indigo-100">Total Pengguna</p>
-              <span className="text-2xl">👥</span>
-            </div>
-            <p className="text-3xl font-bold">{users.length}</p>
-            <p className="text-sm text-indigo-100 mt-1">Pengguna terdaftar</p>
-          </div>
-          
-          <div className="bg-gradient-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 p-6 rounded-xl shadow-lg text-white">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-green-100">Soal Tersedia</p>
-              <span className="text-2xl">📚</span>
-            </div>
-            <p className="text-3xl font-bold">
-              {tryouts.reduce((acc, t) => acc + t.total_questions, 0)}
-            </p>
-            <p className="text-sm text-green-100 mt-1">Total soal di semua tryout</p>
-          </div>
-          
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 p-6 rounded-xl shadow-lg text-white">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-blue-100">Total Durasi</p>
-              <span className="text-2xl">⏱️</span>
-            </div>
-            <p className="text-3xl font-bold">
-              {tryouts.reduce((acc, t) => acc + t.duration_minutes, 0)}
-            </p>
-            <p className="text-sm text-blue-100 mt-1">Menit pengerjaan</p>
-          </div>
-        </div>
+      {/* Statistics Cards */}
+      <StatsGrid stats={stats} columns={4} />
 
-        {/* Tryout and User Lists */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Tryout List */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Tryout Terbaru
-              </h2>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {tryouts.length} tryout
-              </span>
-            </div>
-            
-            {tryouts.length === 0 ? (
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 text-center">
-                <div className="text-4xl mb-2">📭</div>
-                <h3 className="font-medium text-gray-900 dark:text-white mb-1">
-                  Belum Ada Tryout
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Tidak ada tryout yang tersedia
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {tryouts.slice(0, 5).map((tryout) => (
-                  <div 
-                    key={tryout.id} 
-                    className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-medium text-gray-900 dark:text-white">
-                          {tryout.title}
-                        </h3>
-                        <div className="flex flex-wrap gap-2 mt-1 text-sm">
-                          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                            <span>📝</span>
-                            <span>{tryout.total_questions} soal</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                            <span>⏱️</span>
-                            <span>{tryout.duration_minutes} menit</span>
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => router.push(`/tryout/${tryout.id}/info`)}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                      >
-                        Detail
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+      {/* Tryout and User Lists */}
+      <GridLayout columns={2} gap="lg">
+        {/* Tryout List */}
+        <TryoutList
+          title="Tryout Terbaru"
+          tryouts={tryouts}
+          onViewResults={(id) => router.push(`/tryout/${id}/results`)}
+          onViewDetail={(id) => router.push(`/tryout/${id}/info`)}
+          showStudentCount={true}
+          showResultsButton={true}
+          showEditButton={false}
+          emptyMessage="Tidak ada tryout yang tersedia"
+          maxItems={5}
+        />
 
-          {/* User List */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Pengguna Terbaru
-              </h2>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {users.length} pengguna
-              </span>
+        {/* User List */}
+        <Section title="Pengguna Terbaru">
+          {users.length === 0 ? (
+            <EmptyState
+              icon="📭"
+              title="Belum Ada Pengguna"
+              message="Tidak ada pengguna terdaftar"
+            />
+          ) : (
+            <div className="space-y-3">
+              {users.slice(0, 5).map((user) => (
+                <UserCard
+                  key={user.id}
+                  user={user}
+                  onViewDetail={(id) => router.push(`/admin/users/${id}`)}
+                />
+              ))}
             </div>
-            
-            {users.length === 0 ? (
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 text-center">
-                <div className="text-4xl mb-2">📭</div>
-                <h3 className="font-medium text-gray-900 dark:text-white mb-1">
-                  Belum Ada Pengguna
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Tidak ada pengguna terdaftar
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {users.slice(0, 5).map((user) => (
-                  <div 
-                    key={user.id} 
-                    className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-medium text-gray-900 dark:text-white">
-                          {user.full_name}
-                        </h3>
-                        <div className="flex flex-wrap gap-2 mt-1 text-sm">
-                          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                            <span>🏢</span>
-                            <span>{user.school}</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                            <span>👤</span>
-                            <span className="capitalize">{user.role}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => router.push(`/admin/users/${user.id}`)}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                      >
-                        Detail
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+          )}
+        </Section>
+      </GridLayout>
+    </DashboardContainer>
   );
 }

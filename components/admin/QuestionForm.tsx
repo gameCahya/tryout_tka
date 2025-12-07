@@ -6,6 +6,7 @@ import AnswerSelector from './AnswerSelector';
 import TableBuilder from './TableBuilder';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import TextAlign from '@tiptap/extension-text-align';
 
 type Tryout = { id: string; title: string };
 
@@ -61,9 +62,16 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
     ['', '', '', '', '']
   ]);
 
-  // Tiptap Editor for Question Text
+  // Tiptap Editor for Question Text with Text Align
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [
+      StarterKit,
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+        alignments: ['left', 'center', 'right', 'justify'],
+        defaultAlignment: 'left',
+      }),
+    ],
     content: form.question_text,
     editorProps: {
       attributes: {
@@ -77,9 +85,16 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
     },
   });
 
-  // Tiptap Editor for Explanation
+  // Tiptap Editor for Explanation with Text Align
   const explanationEditor = useEditor({
-    extensions: [StarterKit],
+    extensions: [
+      StarterKit,
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+        alignments: ['left', 'center', 'right', 'justify'],
+        defaultAlignment: 'left',
+      }),
+    ],
     content: form.explanation,
     editorProps: {
       attributes: {
@@ -111,7 +126,6 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
         reasoning_answers: editingQuestion.reasoning_answers || {},
       });
       
-      // Update editor content when editing
       if (editor) editor.commands.setContent(editingQuestion.question_text);
       if (explanationEditor) explanationEditor.commands.setContent(editingQuestion.explanation);
     } else {
@@ -257,17 +271,20 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
     onClick, 
     isActive, 
     disabled, 
-    children 
+    children,
+    title 
   }: { 
     onClick: () => void; 
     isActive?: boolean; 
     disabled?: boolean; 
     children: React.ReactNode;
+    title?: string;
   }) => (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      title={title}
       className={`px-3 py-1 rounded transition-colors ${
         isActive
           ? 'bg-blue-600 text-white'
@@ -329,9 +346,11 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
           <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
             {/* Toolbar */}
             <div className="flex flex-wrap gap-2 p-2 border-b border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
+              {/* Format Text */}
               <ToolbarButton
                 onClick={() => editor.chain().focus().toggleBold().run()}
                 isActive={editor.isActive('bold')}
+                title="Bold"
               >
                 <strong>B</strong>
               </ToolbarButton>
@@ -339,6 +358,7 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
               <ToolbarButton
                 onClick={() => editor.chain().focus().toggleItalic().run()}
                 isActive={editor.isActive('italic')}
+                title="Italic"
               >
                 <em>I</em>
               </ToolbarButton>
@@ -346,15 +366,18 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
               <ToolbarButton
                 onClick={() => editor.chain().focus().toggleStrike().run()}
                 isActive={editor.isActive('strike')}
+                title="Strikethrough"
               >
                 <s>S</s>
               </ToolbarButton>
 
               <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
 
+              {/* Headings */}
               <ToolbarButton
                 onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
                 isActive={editor.isActive('heading', { level: 2 })}
+                title="Heading 2"
               >
                 H2
               </ToolbarButton>
@@ -362,15 +385,53 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
               <ToolbarButton
                 onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
                 isActive={editor.isActive('heading', { level: 3 })}
+                title="Heading 3"
               >
                 H3
               </ToolbarButton>
 
               <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
 
+              {/* Text Alignment - NEW! */}
+              <ToolbarButton
+                onClick={() => editor.chain().focus().setTextAlign('left').run()}
+                isActive={editor.isActive({ textAlign: 'left' })}
+                title="Align Left"
+              >
+                ⬅️
+              </ToolbarButton>
+
+              <ToolbarButton
+                onClick={() => editor.chain().focus().setTextAlign('center').run()}
+                isActive={editor.isActive({ textAlign: 'center' })}
+                title="Align Center"
+              >
+                ↔️
+              </ToolbarButton>
+
+              <ToolbarButton
+                onClick={() => editor.chain().focus().setTextAlign('right').run()}
+                isActive={editor.isActive({ textAlign: 'right' })}
+                title="Align Right"
+              >
+                ➡️
+              </ToolbarButton>
+
+              <ToolbarButton
+                onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+                isActive={editor.isActive({ textAlign: 'justify' })}
+                title="Justify"
+              >
+                ⬌
+              </ToolbarButton>
+
+              <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
+
+              {/* Lists */}
               <ToolbarButton
                 onClick={() => editor.chain().focus().toggleBulletList().run()}
                 isActive={editor.isActive('bulletList')}
+                title="Bullet List"
               >
                 • List
               </ToolbarButton>
@@ -378,15 +439,18 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
               <ToolbarButton
                 onClick={() => editor.chain().focus().toggleOrderedList().run()}
                 isActive={editor.isActive('orderedList')}
+                title="Numbered List"
               >
                 1. List
               </ToolbarButton>
 
               <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
 
+              {/* Undo/Redo */}
               <ToolbarButton
                 onClick={() => editor.chain().focus().undo().run()}
                 disabled={!editor.can().undo()}
+                title="Undo"
               >
                 ↶
               </ToolbarButton>
@@ -394,6 +458,7 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
               <ToolbarButton
                 onClick={() => editor.chain().focus().redo().run()}
                 disabled={!editor.can().redo()}
+                title="Redo"
               >
                 ↷
               </ToolbarButton>
@@ -405,7 +470,7 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
         )}
         
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          💡 Gunakan toolbar untuk format text: <strong>bold</strong>, <em>italic</em>, heading, list, dll.
+          💡 Gunakan toolbar untuk format text: <strong>bold</strong>, <em>italic</em>, heading, alignment, list, dll.
         </p>
       </div>
 
@@ -491,6 +556,7 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
               <ToolbarButton
                 onClick={() => explanationEditor.chain().focus().toggleBold().run()}
                 isActive={explanationEditor.isActive('bold')}
+                title="Bold"
               >
                 <strong>B</strong>
               </ToolbarButton>
@@ -498,13 +564,52 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
               <ToolbarButton
                 onClick={() => explanationEditor.chain().focus().toggleItalic().run()}
                 isActive={explanationEditor.isActive('italic')}
+                title="Italic"
               >
                 <em>I</em>
               </ToolbarButton>
 
+              <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
+
+              {/* Text Alignment - NEW! */}
+              <ToolbarButton
+                onClick={() => explanationEditor.chain().focus().setTextAlign('left').run()}
+                isActive={explanationEditor.isActive({ textAlign: 'left' })}
+                title="Align Left"
+              >
+                ⬅️
+              </ToolbarButton>
+
+              <ToolbarButton
+                onClick={() => explanationEditor.chain().focus().setTextAlign('center').run()}
+                isActive={explanationEditor.isActive({ textAlign: 'center' })}
+                title="Align Center"
+              >
+                ↔️
+              </ToolbarButton>
+
+              <ToolbarButton
+                onClick={() => explanationEditor.chain().focus().setTextAlign('right').run()}
+                isActive={explanationEditor.isActive({ textAlign: 'right' })}
+                title="Align Right"
+              >
+                ➡️
+              </ToolbarButton>
+
+              <ToolbarButton
+                onClick={() => explanationEditor.chain().focus().setTextAlign('justify').run()}
+                isActive={explanationEditor.isActive({ textAlign: 'justify' })}
+                title="Justify"
+              >
+                ⬌
+              </ToolbarButton>
+
+              <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
+
               <ToolbarButton
                 onClick={() => explanationEditor.chain().focus().toggleBulletList().run()}
                 isActive={explanationEditor.isActive('bulletList')}
+                title="Bullet List"
               >
                 • List
               </ToolbarButton>
@@ -512,6 +617,7 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
               <ToolbarButton
                 onClick={() => explanationEditor.chain().focus().undo().run()}
                 disabled={!explanationEditor.can().undo()}
+                title="Undo"
               >
                 ↶
               </ToolbarButton>
@@ -519,6 +625,7 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
               <ToolbarButton
                 onClick={() => explanationEditor.chain().focus().redo().run()}
                 disabled={!explanationEditor.can().redo()}
+                title="Redo"
               >
                 ↷
               </ToolbarButton>

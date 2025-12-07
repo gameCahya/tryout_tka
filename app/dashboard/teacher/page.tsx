@@ -1,8 +1,25 @@
+// ============================================
+// app/dashboard/teacher/page.tsx
+// ============================================
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+
+// Layout Components
+import { DashboardContainer } from '@/components/layout/DashboardContainer';
+import { DashboardHeader } from '@/components/layout/DashboardHeader';
+import { StatsGrid } from '@/components/layout/StatsGrid';
+import { GridLayout } from '@/components/layout/GridLayout';
+
+// Dashboard Components
+import { ProfileCard } from '@/components/dashboard/ProfileCard';
+import { TryoutList } from '@/components/dashboard/TryoutList';
+import { ProgressList } from '@/components/dashboard/ProgressList';
+
+// Common Components
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 
 type Profile = {
   full_name: string;
@@ -17,9 +34,6 @@ type Tryout = {
   total_questions: number;
   duration_minutes: number;
   created_at: string;
-  start_time?: string;
-  end_time?: string;
-  price?: number;
   teacher_id?: string;
 };
 
@@ -32,7 +46,6 @@ type UserProgress = {
   score: number | null;
   completed_at: string | null;
   total_questions: number;
-  answered_questions: number;
 };
 
 export default function TeacherDashboardPage() {
@@ -45,71 +58,48 @@ export default function TeacherDashboardPage() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Check session
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           router.push('/auth/login');
           return;
         }
 
-        // Check if user has teacher role
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('full_name, phone, school, role')
           .eq('id', session.user.id)
           .single();
 
-        if (profileError) {
-          console.error('Error fetching profile:', profileError);
-          router.push('/auth/login');
-          return;
-        }
-
-        if (!profileData || !['admin', 'teacher'].includes(profileData.role || '')) {
+        if (profileError || !profileData || !['admin', 'teacher'].includes(profileData.role || '')) {
           router.push('/dashboard/user');
           return;
         }
 
         setProfile(profileData);
 
-        // Fetch tryouts created by this teacher only
-        const { data: tryoutsData, error: tryoutsError } = await supabase
+        // Fetch tryouts
+        const { data: tryoutsData } = await supabase
           .from('tryouts')
-          .select('id, title, total_questions, duration_minutes, created_at, start_time, end_time, price, teacher_id')
-          .eq('teacher_id', session.user.id) // Filter by teacher_id
+          .select('id, title, total_questions, duration_minutes, created_at, teacher_id')
+          .eq('teacher_id', session.user.id)
           .order('created_at', { ascending: false });
-
-        if (tryoutsError) {
-          console.error('Error fetching tryouts:', tryoutsError);
-          console.error('Error details:', JSON.stringify(tryoutsError, null, 2));
-          setTryouts([]);
-          setProgress([]);
-          setLoading(false);
-          return;
-        }
 
         setTryouts(tryoutsData || []);
 
-        // Fetch user progress for tryouts from same school
+        // Fetch progress
         const tryoutIds = tryoutsData?.map(t => t.id) || [];
 
         if (tryoutIds.length > 0) {
-          // Step 1: Get all students from same school
-          const { data: studentsData, error: studentsError } = await supabase
+          const { data: studentsData } = await supabase
             .from('profiles')
             .select('id, full_name, school')
             .eq('school', profileData.school)
             .neq('role', 'teacher')
             .neq('role', 'admin');
 
-          if (studentsError) {
-            console.error('Error fetching students:', studentsError);
-            setProgress([]);
-          } else if (studentsData && studentsData.length > 0) {
+          if (studentsData && studentsData.length > 0) {
             const studentIds = studentsData.map(s => s.id);
-
-            // Step 2: Get results from 'results' table only for students from same school
-            const { data: resultsData, error: resultsError } = await supabase
+            const { data: resultsData } = await supabase
               .from('results')
               .select('id, user_id, tryout_id, score, completed_at, total_questions')
               .in('tryout_id', tryoutIds)
@@ -117,15 +107,10 @@ export default function TeacherDashboardPage() {
               .order('completed_at', { ascending: false })
               .limit(20);
 
-            if (resultsError) {
-              console.error('Error fetching results:', resultsError);
-              setProgress([]);
-            } else if (resultsData && resultsData.length > 0) {
-              // Step 3: Combine results with user names
+            if (resultsData) {
               const combinedProgress: UserProgress[] = resultsData.map(result => {
                 const student = studentsData.find(s => s.id === result.user_id);
                 const tryout = tryoutsData?.find(t => t.id === result.tryout_id);
-                
                 return {
                   id: result.id,
                   user_id: result.user_id,
@@ -135,24 +120,16 @@ export default function TeacherDashboardPage() {
                   score: result.score,
                   completed_at: result.completed_at,
                   total_questions: result.total_questions || tryout?.total_questions || 0,
-                  answered_questions: 0,
                 };
               });
-
               setProgress(combinedProgress);
-            } else {
-              setProgress([]);
             }
-          } else {
-            setProgress([]);
           }
-        } else {
-          setProgress([]);
         }
 
+        setLoading(false);
       } catch (error) {
-        console.error('Unexpected error in fetchDashboardData:', error);
-      } finally {
+        console.error('Error:', error);
         setLoading(false);
       }
     };
@@ -165,288 +142,126 @@ export default function TeacherDashboardPage() {
     router.push('/auth/login');
   };
 
+  // Prepare tryouts with student count
+  const tryoutsWithStats = tryouts.map(tryout => ({
+    ...tryout,
+    student_count: progress.filter(p => p.tryout_id === tryout.id).length,
+  }));
+
+  // Prepare stats
+  const stats = [
+    {
+      title: 'Total Tryout',
+      value: tryouts.length,
+      subtitle: 'Tryout yang dibuat',
+      icon: '📝',
+      gradient: 'purple' as const,
+    },
+    {
+      title: 'Soal Tersedia',
+      value: tryouts.reduce((acc, t) => acc + t.total_questions, 0),
+      subtitle: 'Total soal yang dibuat',
+      icon: '📚',
+      gradient: 'indigo' as const,
+    },
+    {
+      title: 'Siswa Aktif',
+      value: new Set(progress.map(p => p.user_id)).size,
+      subtitle: 'Siswa mengerjakan tryout',
+      icon: '👥',
+      gradient: 'green' as const,
+    },
+    {
+      title: 'Tryout Diselesaikan',
+      value: progress.filter(p => p.completed_at !== null).length,
+      subtitle: 'Tryout selesai dikerjakan',
+      icon: '✅',
+      gradient: 'blue' as const,
+    },
+  ];
+
+  // Prepare header actions
+  const headerActions = [
+    {
+      icon: '➕',
+      label: 'Buat Tryout',
+      onClick: () => router.push('/tryout/create'),
+      color: 'purple' as const,
+    },
+    {
+      icon: '📝',
+      label: 'Kelola Soal',
+      onClick: () => router.push('/admin'),
+      color: 'green' as const,
+    },
+    {
+      icon: '📚',
+      label: 'History',
+      onClick: () => router.push('/history'),
+      color: 'blue' as const,
+    },
+    {
+      icon: '🚪',
+      label: 'Logout',
+      onClick: handleLogout,
+      color: 'red' as const,
+    },
+  ];
+
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Memuat dashboard..." />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 transition-colors">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 py-4 border-b border-gray-200 dark:border-gray-700">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-              Dashboard Guru
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Selamat datang, {profile?.full_name}! 👋
-            </p>
-          </div>
-          
-          <div className="flex flex-wrap gap-2 md:gap-3">
-            <button
-              onClick={() => router.push('/tryout/create')}
-              className="flex items-center gap-2 bg-purple-600 dark:bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors text-sm md:text-base"
-            >
-              <span>➕</span>
-              <span>Buat Tryout</span>
-            </button>
-            
-            <button
-              onClick={() => router.push('/admin')}
-              className="flex items-center gap-2 bg-green-600 dark:bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-sm md:text-base"
-            >
-              <span>📝</span>
-              <span>Kelola Soal</span>
-            </button>
-            
-            <button
-              onClick={() => router.push('/history')}
-              className="flex items-center gap-2 bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors text-sm md:text-base"
-            >
-              <span>📚</span>
-              <span>History</span>
-            </button>
-            
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 bg-red-600 dark:bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors text-sm md:text-base"
-            >
-              <span>🚪</span>
-              <span>Logout</span>
-            </button>
-          </div>
-        </header>
+    <DashboardContainer maxWidth="xl">
+      {/* Header */}
+      <DashboardHeader
+        title="Dashboard Guru"
+        subtitle={`Selamat datang, ${profile?.full_name}! 👋`}
+        actions={headerActions}
+      />
 
-        {/* Teacher Profile Card */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 mb-8 transition-colors">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xl font-bold">
-              {profile?.full_name?.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                {profile?.full_name}
-              </h2>
-              <p className="text-sm text-gray-900 dark:text-white">
-                Guru/Pembuat Soal
-              </p>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">No HP</p>
-              <p className="font-medium text-gray-900 dark:text-white">{profile?.phone}</p>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Sekolah</p>
-              <p className="font-medium text-gray-900 dark:text-white">{profile?.school}</p>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Akses</p>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-                <p className="font-medium text-purple-600 dark:text-purple-400">Guru</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Profile Card */}
+      {profile && (
+        <ProfileCard
+          name={profile.full_name}
+          role="Guru/Pembuat Soal"
+          phone={profile.phone}
+          school={profile.school}
+          roleColor="purple"
+        />
+      )}
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 p-6 rounded-xl shadow-lg text-white">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-purple-100">Total Tryout</p>
-              <span className="text-2xl">📝</span>
-            </div>
-            <p className="text-3xl font-bold">{tryouts.length}</p>
-            <p className="text-sm text-purple-100 mt-1">Tryout yang dibuat</p>
-          </div>
-          
-          <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 dark:from-indigo-600 dark:to-indigo-700 p-6 rounded-xl shadow-lg text-white">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-indigo-100">Soal Tersedia</p>
-              <span className="text-2xl">📚</span>
-            </div>
-            <p className="text-3xl font-bold">
-              {tryouts.reduce((acc, t) => acc + t.total_questions, 0)}
-            </p>
-            <p className="text-sm text-indigo-100 mt-1">Total soal yang dibuat</p>
-          </div>
-          
-          <div className="bg-gradient-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 p-6 rounded-xl shadow-lg text-white">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-green-100">Siswa Aktif</p>
-              <span className="text-2xl">👥</span>
-            </div>
-            <p className="text-3xl font-bold">{new Set(progress.map(p => p.user_id)).size}</p>
-            <p className="text-sm text-green-100 mt-1">Siswa mengerjakan tryout</p>
-          </div>
-          
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 p-6 rounded-xl shadow-lg text-white">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-blue-100">Tryout Diselesaikan</p>
-              <span className="text-2xl">✅</span>
-            </div>
-            <p className="text-3xl font-bold">
-              {progress.filter(p => p.completed_at !== null).length}
-            </p>
-            <p className="text-sm text-blue-100 mt-1">Tryout selesai dikerjakan</p>
-          </div>
-        </div>
+      {/* Statistics Cards */}
+      <StatsGrid stats={stats} columns={4} />
 
-        {/* Tryout and Progress Lists */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Tryout List */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Tryout Saya
-              </h2>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {tryouts.length} tryout
-              </span>
-            </div>
-            
-            {tryouts.length === 0 ? (
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 text-center">
-                <div className="text-4xl mb-2">📭</div>
-                <h3 className="font-medium text-gray-900 dark:text-white mb-1">
-                  Belum Ada Tryout
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Anda belum membuat tryout
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {tryouts.slice(0, 5).map((tryout) => (
-                  <div 
-                    key={tryout.id} 
-                    className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-900 dark:text-white">
-                          {tryout.title}
-                        </h3>
-                        <div className="flex flex-wrap gap-2 mt-1 text-sm">
-                          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                            <span>📝</span>
-                            <span>{tryout.total_questions} soal</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                            <span>⏱️</span>
-                            <span>{tryout.duration_minutes} menit</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                            <span>👥</span>
-                            <span>
-                              {progress.filter(p => p.tryout_id === tryout.id).length} siswa
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 ml-2">
-                        <button
-                          onClick={() => router.push(`/tryout/${tryout.id}/results`)}
-                          className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 text-sm font-medium"
-                          title="Lihat Hasil"
-                        >
-                          📊 Hasil
-                        </button>
-                        <button
-                          onClick={() => router.push(`/tryout/${tryout.id}/edit`)}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium"
-                        >
-                          Edit
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+      {/* Tryout and Progress Lists */}
+      <GridLayout columns={2} gap="lg">
+        <TryoutList
+          title="Tryout Saya"
+          tryouts={tryoutsWithStats}
+          onViewResults={(id) => router.push(`/tryout/${id}/results`)}
+          onEdit={(id) => router.push(`/tryout/${id}/edit`)}
+          showStudentCount={true}
+          showResultsButton={true}
+          showEditButton={true}
+          emptyMessage="Anda belum membuat tryout"
+          emptyAction={{
+            label: 'Buat Tryout',
+            onClick: () => router.push('/tryout/create'),
+          }}
+          maxItems={5}
+        />
 
-          {/* Progress List */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Progress Siswa
-              </h2>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {progress.length} hasil
-              </span>
-            </div>
-            
-            {progress.length === 0 ? (
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 text-center">
-                <div className="text-4xl mb-2">📊</div>
-                <h3 className="font-medium text-gray-900 dark:text-white mb-1">
-                  Belum Ada Progress
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Belum ada siswa yang mengerjakan tryout
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {progress.slice(0, 5).map((item) => (
-                  <div 
-                    key={item.id} 
-                    className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-medium text-gray-900 dark:text-white">
-                          {item.user_name}
-                        </h3>
-                        <div className="flex flex-wrap gap-2 mt-1 text-sm">
-                          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                            <span>📝</span>
-                            <span>{item.tryout_title}</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                            <span>📊</span>
-                            {item.score !== null ? (
-                              <span>{item.score}%</span>
-                            ) : (
-                              <span>Belum selesai</span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                            <span>🕒</span>
-                            {item.completed_at ? (
-                              <span>{new Date(item.completed_at).toLocaleDateString('id-ID')}</span>
-                            ) : (
-                              <span>Belum selesai</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => router.push(`/tryout/${item.tryout_id}/results/${item.user_id}`)}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                      >
-                        Detail
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+        <ProgressList
+          title="Progress Siswa"
+          progress={progress}
+          onViewDetail={(tryoutId, userId) => 
+            router.push(`/tryout/${tryoutId}/results/${userId}`)
+          }
+          maxItems={5}
+        />
+      </GridLayout>
+    </DashboardContainer>
   );
 }
