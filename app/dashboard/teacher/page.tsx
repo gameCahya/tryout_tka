@@ -185,7 +185,7 @@ export default function TeacherDashboardPage() {
     {
       icon: '➕',
       label: 'Buat Tryout',
-      onClick: () => router.push('/tryout/create'),
+      onClick: () => router.push('/admin'),
       color: 'purple' as const,
     },
     {

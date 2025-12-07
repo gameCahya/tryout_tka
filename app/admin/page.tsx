@@ -11,6 +11,11 @@ type Tryout = {
   id: string; 
   title: string;
   teacher_id?: string;
+  total_questions: number;
+  duration_minutes: number;
+  price: number;
+  school?: string;
+  is_shared?: boolean;
 };
 
 type Question = {
@@ -25,16 +30,40 @@ type Question = {
   tryout_id: string;
 };
 
+type TryoutFormData = {
+  title: string;
+  total_questions: number;
+  duration_minutes: number;
+  price: number;
+  start_time: string;
+  end_time: string;
+  is_shared: boolean;
+};
+
 export default function ManageQuestionsPage() {
   const [tryouts, setTryouts] = useState<Tryout[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [selectedTryoutForView, setSelectedTryoutForView] = useState('');
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-  const [activeTab, setActiveTab] = useState<'add' | 'view'>('add');
+  const [activeTab, setActiveTab] = useState<'tryout' | 'add' | 'view'>('tryout');
   const [userRole, setUserRole] = useState<'admin' | 'teacher' | null>(null);
   const [userId, setUserId] = useState<string>('');
+  const [userSchool, setUserSchool] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [showTryoutForm, setShowTryoutForm] = useState(false);
+  const [editingTryout, setEditingTryout] = useState<Tryout | null>(null);
   const router = useRouter();
+
+  // Form state
+  const [tryoutForm, setTryoutForm] = useState<TryoutFormData>({
+    title: '',
+    total_questions: 40,
+    duration_minutes: 90,
+    price: 0,
+    start_time: '',
+    end_time: '',
+    is_shared: false
+  });
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -49,7 +78,7 @@ export default function ManageQuestionsPage() {
 
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, school')
           .eq('id', session.user.id)
           .single();
 
@@ -67,24 +96,10 @@ export default function ManageQuestionsPage() {
         }
 
         setUserRole(profile.role);
+        setUserSchool(profile.school);
 
         // Fetch tryouts based on role
-        let tryoutQuery = supabase
-          .from('tryouts')
-          .select('id, title, teacher_id');
-
-        // If teacher, only show their own tryouts
-        if (profile.role === 'teacher') {
-          tryoutQuery = tryoutQuery.eq('teacher_id', session.user.id);
-        }
-
-        const { data: tryoutList, error: tryoutError } = await tryoutQuery.order('created_at', { ascending: false });
-
-        if (tryoutError) {
-          console.error('Error fetching tryouts:', tryoutError);
-        } else {
-          setTryouts(tryoutList || []);
-        }
+        await loadTryouts(profile.role, session.user.id);
 
         setLoading(false);
       } catch (err) {
@@ -96,6 +111,25 @@ export default function ManageQuestionsPage() {
 
     checkAccess();
   }, [router]);
+
+  const loadTryouts = async (role: string, currentUserId: string) => {
+    let tryoutQuery = supabase
+      .from('tryouts')
+      .select('id, title, teacher_id, total_questions, duration_minutes, price, school, is_shared');
+
+    // If teacher, only show their own tryouts
+    if (role === 'teacher') {
+      tryoutQuery = tryoutQuery.eq('teacher_id', currentUserId);
+    }
+
+    const { data: tryoutList, error: tryoutError } = await tryoutQuery.order('created_at', { ascending: false });
+
+    if (tryoutError) {
+      console.error('Error fetching tryouts:', tryoutError);
+    } else {
+      setTryouts(tryoutList || []);
+    }
+  };
 
   const loadQuestions = async (tryoutId: string) => {
     const { data, error } = await supabase
@@ -112,7 +146,6 @@ export default function ManageQuestionsPage() {
   };
 
   const handleEdit = (question: Question) => {
-    // Check if user has permission to edit this question
     const tryout = tryouts.find(t => t.id === question.tryout_id);
     
     if (userRole === 'teacher' && tryout?.teacher_id !== userId) {
@@ -129,7 +162,6 @@ export default function ManageQuestionsPage() {
     if (!confirm('Apakah Anda yakin ingin menghapus soal ini?')) return;
 
     try {
-      // Get question details first to check ownership
       const questionToDelete = questions.find(q => q.id === questionId);
       if (!questionToDelete) {
         alert('Soal tidak ditemukan');
@@ -138,7 +170,6 @@ export default function ManageQuestionsPage() {
 
       const tryout = tryouts.find(t => t.id === questionToDelete.tryout_id);
       
-      // Check permission
       if (userRole === 'teacher' && tryout?.teacher_id !== userId) {
         alert('Anda tidak memiliki izin untuk menghapus soal ini');
         return;
@@ -173,6 +204,134 @@ export default function ManageQuestionsPage() {
     setEditingQuestion(null);
   };
 
+  const handleTryoutSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!tryoutForm.title.trim()) {
+      alert('Judul tryout harus diisi');
+      return;
+    }
+
+    try {
+      const tryoutData = {
+        title: tryoutForm.title,
+        total_questions: tryoutForm.total_questions,
+        duration_minutes: tryoutForm.duration_minutes,
+        price: tryoutForm.price,
+        start_time: tryoutForm.start_time || null,
+        end_time: tryoutForm.end_time || null,
+        teacher_id: userId,
+        school: userSchool,
+        is_shared: tryoutForm.is_shared
+      };
+
+      if (editingTryout) {
+        // Update existing tryout
+        const { error } = await supabase
+          .from('tryouts')
+          .update(tryoutData)
+          .eq('id', editingTryout.id);
+
+        if (error) throw error;
+        alert('Tryout berhasil diperbarui!');
+      } else {
+        // Create new tryout
+        const { error } = await supabase
+          .from('tryouts')
+          .insert([tryoutData]);
+
+        if (error) throw error;
+        alert('Tryout berhasil dibuat!');
+      }
+
+      // Reset form
+      setTryoutForm({
+        title: '',
+        total_questions: 40,
+        duration_minutes: 90,
+        price: 0,
+        start_time: '',
+        end_time: '',
+        is_shared: false
+      });
+      setShowTryoutForm(false);
+      setEditingTryout(null);
+
+      // Reload tryouts
+      await loadTryouts(userRole!, userId);
+    } catch (err: any) {
+      console.error(err);
+      alert('Gagal menyimpan tryout: ' + err.message);
+    }
+  };
+
+  const handleEditTryout = (tryout: Tryout) => {
+    if (userRole === 'teacher' && tryout.teacher_id !== userId) {
+      alert('Anda tidak memiliki izin untuk mengedit tryout ini');
+      return;
+    }
+
+    setEditingTryout(tryout);
+    setTryoutForm({
+      title: tryout.title,
+      total_questions: tryout.total_questions,
+      duration_minutes: tryout.duration_minutes,
+      price: tryout.price,
+      start_time: '',
+      end_time: '',
+      is_shared: tryout.is_shared || false
+    });
+    setShowTryoutForm(true);
+    setActiveTab('tryout');
+  };
+
+  const handleDeleteTryout = async (tryoutId: string) => {
+    const tryout = tryouts.find(t => t.id === tryoutId);
+    
+    if (userRole === 'teacher' && tryout?.teacher_id !== userId) {
+      alert('Anda tidak memiliki izin untuk menghapus tryout ini');
+      return;
+    }
+
+    if (!confirm('Apakah Anda yakin ingin menghapus tryout ini? Semua soal dalam tryout ini akan ikut terhapus.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('tryouts')
+        .delete()
+        .eq('id', tryoutId);
+
+      if (error) throw error;
+
+      alert('Tryout berhasil dihapus!');
+      await loadTryouts(userRole!, userId);
+      
+      if (selectedTryoutForView === tryoutId) {
+        setSelectedTryoutForView('');
+        setQuestions([]);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert('Gagal menghapus tryout: ' + err.message);
+    }
+  };
+
+  const cancelTryoutForm = () => {
+    setShowTryoutForm(false);
+    setEditingTryout(null);
+    setTryoutForm({
+      title: '',
+      total_questions: 40,
+      duration_minutes: 90,
+      price: 0,
+      start_time: '',
+      end_time: '',
+      is_shared: false
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -192,12 +351,12 @@ export default function ManageQuestionsPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {userRole === 'admin' ? 'Admin Panel - Kelola Soal' : 'Kelola Soal Tryout'}
+              {userRole === 'admin' ? 'Admin Panel - Kelola Tryout & Soal' : 'Kelola Tryout & Soal'}
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               {userRole === 'admin' 
-                ? 'Kelola semua soal tryout' 
-                : 'Kelola soal untuk tryout yang Anda buat'}
+                ? 'Kelola semua tryout dan soal' 
+                : 'Kelola tryout dan soal yang Anda buat'}
             </p>
           </div>
           <button
@@ -208,18 +367,18 @@ export default function ManageQuestionsPage() {
           </button>
         </div>
 
-        {/* Info banner for teachers */}
-        {userRole === 'teacher' && tryouts.length === 0 && (
-          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 rounded-xl">
-            <p className="font-medium mb-1">📝 Belum ada tryout</p>
-            <p className="text-sm">
-              Anda belum membuat tryout. Silakan buat tryout terlebih dahulu di Dashboard Guru sebelum menambahkan soal.
-            </p>
-          </div>
-        )}
-
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 flex-wrap">
+          <button
+            onClick={() => setActiveTab('tryout')}
+            className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+              activeTab === 'tryout'
+                ? 'bg-blue-600 text-white dark:bg-blue-500'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
+            }`}
+          >
+            📚 Kelola Tryout
+          </button>
           <button
             onClick={() => setActiveTab('add')}
             className={`px-6 py-3 rounded-lg font-medium transition-colors ${
@@ -242,7 +401,228 @@ export default function ManageQuestionsPage() {
           </button>
         </div>
 
-        {/* Add/Edit Form */}
+        {/* Tryout Management Tab */}
+        {activeTab === 'tryout' && (
+          <div>
+            {/* Create Tryout Button */}
+            {!showTryoutForm && (
+              <div className="mb-6">
+                <button
+                  onClick={() => setShowTryoutForm(true)}
+                  className="px-6 py-3 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors font-medium"
+                >
+                  ➕ Buat Tryout Baru
+                </button>
+              </div>
+            )}
+
+            {/* Tryout Form */}
+            {showTryoutForm && (
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                  {editingTryout ? '✏️ Edit Tryout' : '➕ Buat Tryout Baru'}
+                </h2>
+                <form onSubmit={handleTryoutSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Judul Tryout *
+                    </label>
+                    <input
+                      type="text"
+                      value={tryoutForm.title}
+                      onChange={(e) => setTryoutForm({ ...tryoutForm, title: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      placeholder="Contoh: Tryout TKA Matematika 1"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Total Soal *
+                      </label>
+                      <input
+                        type="number"
+                        value={tryoutForm.total_questions}
+                        onChange={(e) => setTryoutForm({ ...tryoutForm, total_questions: parseInt(e.target.value) || 0 })}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                        min="1"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Durasi (menit) *
+                      </label>
+                      <input
+                        type="number"
+                        value={tryoutForm.duration_minutes}
+                        onChange={(e) => setTryoutForm({ ...tryoutForm, duration_minutes: parseInt(e.target.value) || 0 })}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                        min="1"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Harga (Rp)
+                      </label>
+                      <input
+                        type="number"
+                        value={tryoutForm.price}
+                        onChange={(e) => setTryoutForm({ ...tryoutForm, price: parseInt(e.target.value) || 0 })}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                        min="0"
+                        placeholder="0 untuk gratis"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Waktu Mulai (Opsional)
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={tryoutForm.start_time}
+                        onChange={(e) => setTryoutForm({ ...tryoutForm, start_time: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Waktu Berakhir (Opsional)
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={tryoutForm.end_time}
+                        onChange={(e) => setTryoutForm({ ...tryoutForm, end_time: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
+                    <input
+                      type="checkbox"
+                      id="is_shared"
+                      checked={tryoutForm.is_shared}
+                      onChange={(e) => setTryoutForm({ ...tryoutForm, is_shared: e.target.checked })}
+                      className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                    />
+                    <label htmlFor="is_shared" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      🌐 Bagikan tryout ini ke semua sekolah
+                      <span className="block text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Jika dicentang, tryout dapat diakses oleh siswa dari semua sekolah
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      <strong>🏫 Sekolah:</strong> {userSchool}
+                    </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                      Tryout ini akan otomatis terkait dengan sekolah Anda
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="submit"
+                      className="px-6 py-2.5 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors font-medium"
+                    >
+                      {editingTryout ? '💾 Update Tryout' : '✅ Simpan Tryout'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelTryoutForm}
+                      className="px-6 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
+                    >
+                      ❌ Batal
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Tryout List */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                📚 Daftar Tryout ({tryouts.length})
+              </h2>
+
+              {tryouts.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-6xl mb-4">📭</div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                    Belum Ada Tryout
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400">
+                    Klik tombol "Buat Tryout Baru" untuk memulai
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {tryouts.map((tryout) => (
+                    <div
+                      key={tryout.id}
+                      className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <h3 className="font-semibold text-gray-900 dark:text-white">
+                              {tryout.title}
+                            </h3>
+                            {tryout.is_shared && (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+                                🌐 Dibagikan
+                              </span>
+                            )}
+                            {tryout.school && (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                🏫 {tryout.school}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
+                            <span>📝 {tryout.total_questions} soal</span>
+                            <span>⏱️ {tryout.duration_minutes} menit</span>
+                            <span>💰 {tryout.price === 0 ? 'Gratis' : `Rp ${tryout.price.toLocaleString('id-ID')}`}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 ml-4">
+                          <button
+                            onClick={() => handleEditTryout(tryout)}
+                            className="px-3 py-1.5 bg-yellow-500 dark:bg-yellow-600 text-white rounded-lg hover:bg-yellow-600 dark:hover:bg-yellow-700 transition-colors text-sm"
+                            title="Edit tryout"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTryout(tryout.id)}
+                            className="px-3 py-1.5 bg-red-500 dark:bg-red-600 text-white rounded-lg hover:bg-red-600 dark:hover:bg-red-700 transition-colors text-sm"
+                            title="Hapus tryout"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Add/Edit Question Form */}
         {activeTab === 'add' && (
           <div>
             {tryouts.length === 0 ? (
@@ -255,7 +635,7 @@ export default function ManageQuestionsPage() {
                   Silakan buat tryout terlebih dahulu untuk menambahkan soal
                 </p>
                 <button
-                  onClick={() => router.push('/tryout/create')}
+                  onClick={() => setActiveTab('tryout')}
                   className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
                 >
                   Buat Tryout
@@ -285,7 +665,7 @@ export default function ManageQuestionsPage() {
                   Silakan buat tryout terlebih dahulu untuk melihat soal
                 </p>
                 <button
-                  onClick={() => router.push('/tryout/create')}
+                  onClick={() => setActiveTab('tryout')}
                   className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
                 >
                   Buat Tryout

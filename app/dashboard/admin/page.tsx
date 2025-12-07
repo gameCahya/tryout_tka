@@ -119,7 +119,7 @@ export default function AdminDashboardPage() {
         // Fetch users
         const { data: usersData, error: usersError } = await supabase
           .from('profiles')
-          .select('id, full_name, phone, school, role')
+          .select('id, full_name, phone, school, role, created_at')
           .order('created_at', { ascending: false });
 
         if (!usersError) {
@@ -182,6 +182,12 @@ export default function AdminDashboardPage() {
       color: 'purple' as const,
     },
     {
+      icon: '👥',
+      label: 'Kelola User',
+      onClick: () => router.push('/admin/users'),
+      color: 'green' as const,
+    },
+    {
       icon: '📚',
       label: 'History',
       onClick: () => router.push('/history'),
@@ -238,7 +244,13 @@ export default function AdminDashboardPage() {
         />
 
         {/* User List */}
-        <Section title="Pengguna Terbaru">
+        <Section 
+          title="Pengguna Terbaru"
+          action={{
+            label: 'Lihat Semua',
+            onClick: () => router.push('/admin/users'),
+          }}
+        >
           {users.length === 0 ? (
             <EmptyState
               icon="📭"

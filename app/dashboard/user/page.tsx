@@ -18,6 +18,9 @@ type Tryout = {
   duration_minutes: number;
   start_time: string | null;
   end_time: string | null;
+  price: number;
+  school: string | null;
+  is_shared: boolean;
 };
 
 export default function UserDashboardPage() {
@@ -47,14 +50,16 @@ export default function UserDashboardPage() {
         return;
       }
 
-      // Fetch tryout list dengan filter waktu
+      // Fetch tryout list dengan filter waktu DAN sekolah
       const currentTime = new Date().toISOString();
       
       const { data: tryoutsData, error: tryoutsError } = await supabase
         .from('tryouts')
-        .select('id, title, total_questions, duration_minutes, start_time, end_time')
+        .select('id, title, total_questions, duration_minutes, start_time, end_time, price, school, is_shared')
         .or(`start_time.is.null,start_time.lte.${currentTime}`)
         .or(`end_time.is.null,end_time.gte.${currentTime}`)
+        // PENTING: Filter berdasarkan sekolah atau yang di-share
+        .or(`school.eq.${profileData.school},is_shared.eq.true,school.is.null`)
         .order('created_at', { ascending: false });
 
       if (tryoutsError) {
@@ -74,7 +79,6 @@ export default function UserDashboardPage() {
     router.push('/auth/login');
   };
 
-  // Helper function untuk format tanggal
   const formatDateTime = (dateString: string | null) => {
     if (!dateString) return null;
     return new Date(dateString).toLocaleString('id-ID', {
@@ -86,7 +90,6 @@ export default function UserDashboardPage() {
     });
   };
 
-  // Helper function untuk cek status tryout
   const getTryoutStatus = (startTime: string | null, endTime: string | null) => {
     const now = new Date();
     
@@ -103,6 +106,33 @@ export default function UserDashboardPage() {
     }
     
     return { status: 'available', label: 'Tersedia', color: 'green' };
+  };
+
+  const getSchoolBadge = (tryoutSchool: string | null, isShared: boolean) => {
+    if (isShared) {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+          🌐 Semua Sekolah
+        </span>
+      );
+    }
+    if (tryoutSchool && tryoutSchool === profile?.school) {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+          🏫 {tryoutSchool}
+        </span>
+      );
+    }
+    return null;
+  };
+
+  const formatPrice = (price: number) => {
+    if (price === 0) return 'Gratis';
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0
+    }).format(price);
   };
 
   if (loading) {
@@ -233,7 +263,7 @@ export default function UserDashboardPage() {
             <div className="bg-white dark:bg-gray-800 p-12 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 text-center">
               <div className="text-6xl mb-4">📭</div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                Tryout dimuai pada tanggal 22 Desember 2025
+                Tryout dimulai pada tanggal 22 Desember 2025
               </h3>
               <p className="text-gray-500 dark:text-gray-400">
                 Belum ada tryout yang tersedia saat ini. Silakan tunggu.
@@ -251,7 +281,7 @@ export default function UserDashboardPage() {
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <h3 className="font-semibold text-lg text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                             {tryout.title}
                           </h3>
@@ -264,6 +294,7 @@ export default function UserDashboardPage() {
                           }`}>
                             {status.label}
                           </span>
+                          {getSchoolBadge(tryout.school, tryout.is_shared)}
                         </div>
                         
                         <div className="flex flex-wrap gap-3 text-sm mb-3">
@@ -274,6 +305,12 @@ export default function UserDashboardPage() {
                           <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
                             <span>⏱️</span>
                             <span>{tryout.duration_minutes} menit</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                            <span>💰</span>
+                            <span className={tryout.price === 0 ? 'text-green-600 dark:text-green-400 font-medium' : ''}>
+                              {formatPrice(tryout.price)}
+                            </span>
                           </div>
                         </div>
                         
