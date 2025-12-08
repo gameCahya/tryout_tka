@@ -48,7 +48,32 @@ export default function TryoutPage() {
 
       const totalSeconds = tryoutData.duration_minutes * 60;
       setDuration(totalSeconds);
-      setTimeLeft(totalSeconds);
+
+      // Check if there's a saved start time
+      const savedStartTime = localStorage.getItem(`tryout_${tryoutId}_start_time`);
+      
+      if (savedStartTime) {
+        // Calculate time left based on elapsed time
+        const startTime = parseInt(savedStartTime);
+        const currentTime = Date.now();
+        const elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
+        const remainingTime = Math.max(0, totalSeconds - elapsedSeconds);
+        
+        if (remainingTime === 0) {
+          // Time's up, submit automatically
+          setTimeLeft(0);
+          setLoading(false);
+          setTimeout(() => submitTryout(), 100);
+          return;
+        }
+        
+        setTimeLeft(remainingTime);
+      } else {
+        // First time starting this tryout, save the start time
+        const startTime = Date.now();
+        localStorage.setItem(`tryout_${tryoutId}_start_time`, startTime.toString());
+        setTimeLeft(totalSeconds);
+      }
 
       const { data: questionsData, error: questionsError } = await supabase
         .from('questions')
@@ -193,6 +218,16 @@ export default function TryoutPage() {
         return;
       }
 
+      // Calculate actual time spent
+      const savedStartTime = localStorage.getItem(`tryout_${tryoutId}_start_time`);
+      let timeSpent = duration - timeLeft;
+      
+      if (savedStartTime) {
+        const startTime = parseInt(savedStartTime);
+        const currentTime = Date.now();
+        timeSpent = Math.floor((currentTime - startTime) / 1000);
+      }
+
       // Calculate score
       let score = 0;
       const userAnswersData: any[] = [];
@@ -256,7 +291,7 @@ export default function TryoutPage() {
           tryout_id: tryoutId,
           score,
           total_questions: questions.length,
-          duration_seconds: duration - timeLeft,
+          duration_seconds: timeSpent,
           completed_at: new Date().toISOString(),
         })
         .select()
@@ -280,9 +315,10 @@ export default function TryoutPage() {
       localStorage.removeItem(`tryout_${tryoutId}_answers`);
       localStorage.removeItem(`tryout_${tryoutId}_multiple_answers`);
       localStorage.removeItem(`tryout_${tryoutId}_reasoning_answers`);
+      localStorage.removeItem(`tryout_${tryoutId}_start_time`);
 
       // Redirect
-      router.push(`/tryout/result?score=${score}&total=${questions.length}&duration=${duration - timeLeft}`);
+      router.push(`/tryout/result?score=${score}&total=${questions.length}&duration=${timeSpent}`);
     } catch (err: any) {
       alert('Error: ' + err.message);
       setSubmitting(false);

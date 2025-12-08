@@ -56,7 +56,12 @@ Terima kasih telah mendaftar. Akun Anda telah berhasil dibuat dan siap digunakan
 
 Silakan login untuk mulai mengikuti try out dan meningkatkan kemampuan Anda.
 
-Semangat belajar! 💪`;
+Semangat belajar! 💪
+
+Silahkan join grup ini https://chat.whatsapp.com/BwCQLC7UjTF8obn5Zuaufn?mode=hqrc
+
+*Note : password jangan sampai lupa ya, karena sistem password masih dalam pengembangan*
+`;
     }
 
     // Kirim ke Fonnte API menggunakan kelas Fonnte

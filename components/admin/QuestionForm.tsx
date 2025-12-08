@@ -45,7 +45,7 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
   const [form, setForm] = useState<FormData>({
     tryout_id: '',
     question_text: '',
-    options: ['', '', '', ''],
+    options: ['', ''],
     correct_answer_index: 0,
     correct_answers: [],
     explanation: '',
@@ -132,7 +132,7 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
       setForm({
         tryout_id: '',
         question_text: '',
-        options: ['', '', '', ''],
+        options: ['', ''],
         correct_answer_index: 0,
         correct_answers: [],
         explanation: '',
@@ -150,6 +150,52 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
     const newOptions = [...form.options];
     newOptions[index] = value;
     setForm({ ...form, options: newOptions });
+  };
+
+  // Add new option
+  const addOption = () => {
+    setForm({ ...form, options: [...form.options, ''] });
+  };
+
+  // Remove option
+  const removeOption = (index: number) => {
+    if (form.options.length <= 1) {
+      alert('Minimal harus ada 1 pilihan jawaban');
+      return;
+    }
+
+    const newOptions = form.options.filter((_, i) => i !== index);
+    
+    // Adjust correct_answer_index if needed
+    let newCorrectIndex = form.correct_answer_index;
+    if (form.correct_answer_index === index) {
+      newCorrectIndex = 0; // Reset to first option
+    } else if (form.correct_answer_index > index) {
+      newCorrectIndex = form.correct_answer_index - 1;
+    }
+
+    // Adjust correct_answers for multiple choice
+    const newCorrectAnswers = form.correct_answers
+      .filter(ans => ans !== index)
+      .map(ans => ans > index ? ans - 1 : ans);
+
+    // Adjust reasoning_answers
+    const newReasoningAnswers: { [key: number]: 'benar' | 'salah' } = {};
+    Object.keys(form.reasoning_answers).forEach((key) => {
+      const keyNum = parseInt(key);
+      if (keyNum !== index) {
+        const newKey = keyNum > index ? keyNum - 1 : keyNum;
+        newReasoningAnswers[newKey] = form.reasoning_answers[keyNum];
+      }
+    });
+
+    setForm({
+      ...form,
+      options: newOptions,
+      correct_answer_index: newCorrectIndex,
+      correct_answers: newCorrectAnswers,
+      reasoning_answers: newReasoningAnswers,
+    });
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -204,7 +250,7 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
       const dataToSave: any = {
         tryout_id: form.tryout_id,
         question_text: questionText,
-        options: form.options,
+        options: form.options.filter(opt => opt.trim() !== ''), // Remove empty options
         correct_answer_index: form.question_type === 'single' ? form.correct_answer_index : -1,
         correct_answers: form.question_type === 'multiple' ? form.correct_answers : null,
         question_type: form.question_type,
@@ -228,7 +274,7 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
       setForm({
         tryout_id: '',
         question_text: '',
-        options: ['', '', '', ''],
+        options: ['', ''],
         correct_answer_index: 0,
         correct_answers: [],
         explanation: '',
@@ -257,11 +303,15 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
 
   const isFormValid = () => {
     if (!form.tryout_id) return false;
+    
+    // Check if at least one option is filled
+    const filledOptions = form.options.filter(o => o.trim() !== '');
+    if (filledOptions.length === 0) return false;
+    
     if (form.question_type === 'multiple' && form.correct_answers.length === 0) return false;
     if (form.question_type === 'reasoning') {
-      const filledOptions = form.options.filter(o => o.trim() !== '').length;
       const answeredReasonings = Object.keys(form.reasoning_answers || {}).length;
-      if (answeredReasonings < filledOptions) return false;
+      if (answeredReasonings < filledOptions.length) return false;
     }
     return true;
   };
@@ -346,7 +396,6 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
           <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
             {/* Toolbar */}
             <div className="flex flex-wrap gap-2 p-2 border-b border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
-              {/* Format Text */}
               <ToolbarButton
                 onClick={() => editor.chain().focus().toggleBold().run()}
                 isActive={editor.isActive('bold')}
@@ -373,7 +422,6 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
 
               <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
 
-              {/* Headings */}
               <ToolbarButton
                 onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
                 isActive={editor.isActive('heading', { level: 2 })}
@@ -392,7 +440,6 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
 
               <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
 
-              {/* Text Alignment - NEW! */}
               <ToolbarButton
                 onClick={() => editor.chain().focus().setTextAlign('left').run()}
                 isActive={editor.isActive({ textAlign: 'left' })}
@@ -427,7 +474,6 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
 
               <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
 
-              {/* Lists */}
               <ToolbarButton
                 onClick={() => editor.chain().focus().toggleBulletList().run()}
                 isActive={editor.isActive('bulletList')}
@@ -446,7 +492,6 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
 
               <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
 
-              {/* Undo/Redo */}
               <ToolbarButton
                 onClick={() => editor.chain().focus().undo().run()}
                 disabled={!editor.can().undo()}
@@ -464,7 +509,6 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
               </ToolbarButton>
             </div>
 
-            {/* Editor */}
             <EditorContent editor={editor} />
           </div>
         )}
@@ -516,20 +560,51 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
         />
       </div>
 
+      {/* Dynamic Options */}
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Pilihan Jawaban</label>
-        {form.options.map((option, idx) => (
-          <div key={idx} className="flex items-center mb-2">
-            <span className="w-6 mr-2 text-gray-700 dark:text-gray-300">{String.fromCharCode(65 + idx)}.</span>
-            <input
-              type="text"
-              value={option}
-              onChange={(e) => handleOptionChange(idx, e.target.value)}
-              className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              required
-            />
-          </div>
-        ))}
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Pilihan Jawaban (Minimal 1)
+          </label>
+          <button
+            type="button"
+            onClick={addOption}
+            className="text-sm bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded transition-colors"
+          >
+            ➕ Tambah Opsi
+          </button>
+        </div>
+        
+        <div className="space-y-2">
+          {form.options.map((option, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <span className="w-8 text-center font-medium text-gray-700 dark:text-gray-300">
+                {String.fromCharCode(65 + idx)}.
+              </span>
+              <input
+                type="text"
+                value={option}
+                onChange={(e) => handleOptionChange(idx, e.target.value)}
+                className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder={`Opsi ${String.fromCharCode(65 + idx)}`}
+              />
+              {form.options.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeOption(idx)}
+                  className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
+                  title="Hapus opsi"
+                >
+                  🗑️
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+          💡 Klik "Tambah Opsi" untuk menambah pilihan jawaban. Minimal 1 opsi, maksimal tidak terbatas.
+        </p>
       </div>
 
       <AnswerSelector
@@ -551,7 +626,6 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
         
         {explanationEditor && (
           <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-            {/* Toolbar */}
             <div className="flex flex-wrap gap-2 p-2 border-b border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
               <ToolbarButton
                 onClick={() => explanationEditor.chain().focus().toggleBold().run()}
@@ -571,7 +645,6 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
 
               <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
 
-              {/* Text Alignment - NEW! */}
               <ToolbarButton
                 onClick={() => explanationEditor.chain().focus().setTextAlign('left').run()}
                 isActive={explanationEditor.isActive({ textAlign: 'left' })}
@@ -631,7 +704,6 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
               </ToolbarButton>
             </div>
 
-            {/* Editor */}
             <EditorContent editor={explanationEditor} />
           </div>
         )}
