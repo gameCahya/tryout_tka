@@ -70,7 +70,7 @@ export default function HistoryPage() {
           duration_seconds: item.duration_seconds,
           created_at: item.completed_at,
           tryout_title: tryoutMap.get(item.tryout_id) || 'Tryout',
-          has_paid: false, // TODO: nanti tambahkan logika payment
+          has_paid: false,
         }));
 
         setHistory(historyData);
@@ -107,22 +107,26 @@ export default function HistoryPage() {
   };
 
   const getScoreColor = (percentage: number) => {
-    if (percentage >= 80) return 'text-green-600 bg-green-50 border-green-200';
-    if (percentage >= 60) return 'text-blue-600 bg-blue-50 border-blue-200';
-    if (percentage >= 40) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-    return 'text-red-600 bg-red-50 border-red-200';
+    if (percentage >= 80) return 'text-green-600 bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700 dark:text-green-400';
+    if (percentage >= 60) return 'text-blue-600 bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-400';
+    if (percentage >= 40) return 'text-yellow-600 bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-700 dark:text-yellow-400';
+    return 'text-red-600 bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700 dark:text-red-400';
   };
 
   const handleViewReview = (resultId: string, tryoutId: string) => {
     router.push(`/history/${resultId}/review?tryout_id=${tryoutId}`);
   };
 
+  const handleViewRanking = (tryoutId: string) => {
+    router.push(`/tryout/${tryoutId}/ranking`);
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Memuat history...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Memuat history...</p>
         </div>
       </div>
     );
@@ -130,14 +134,14 @@ export default function HistoryPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center bg-white p-8 rounded-lg shadow">
-          <div className="text-red-600 text-5xl mb-4">⚠️</div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">Gagal Memuat History</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center bg-white dark:bg-gray-800 p-8 rounded-lg shadow">
+          <div className="text-red-600 dark:text-red-400 text-5xl mb-4">⚠️</div>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Gagal Memuat History</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
           <button
             onClick={() => router.push('/dashboard')}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+            className="bg-blue-600 dark:bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600"
           >
             Kembali ke Dashboard
           </button>
@@ -147,36 +151,36 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-6">
           <button
             onClick={() => router.push('/dashboard')}
-            className="text-blue-600 hover:text-blue-800 mb-4 flex items-center"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mb-4 flex items-center"
           >
             ← Kembali ke Dashboard
           </button>
-          <h1 className="text-3xl font-bold text-gray-800">📚 History Tryout</h1>
-          <p className="text-gray-600 mt-2">Lihat hasil tryout yang sudah Anda kerjakan</p>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">📚 History Tryout</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Lihat hasil tryout yang sudah Anda kerjakan</p>
         </div>
 
         {/* Stats Summary */}
         {history.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
-              <p className="text-gray-600 text-sm">Total Tryout</p>
-              <p className="text-2xl font-bold text-blue-600">{history.length}</p>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border-l-4 border-blue-500">
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Total Tryout</p>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{history.length}</p>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
-              <p className="text-gray-600 text-sm">Rata-rata Skor</p>
-              <p className="text-2xl font-bold text-green-600">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border-l-4 border-green-500">
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Rata-rata Skor</p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                 {(history.reduce((sum, item) => sum + (item.score / item.total_questions) * 100, 0) / history.length).toFixed(1)}%
               </p>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-purple-500">
-              <p className="text-gray-600 text-sm">Soal Dijawab</p>
-              <p className="text-2xl font-bold text-purple-600">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border-l-4 border-purple-500">
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Soal Dijawab</p>
+              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                 {history.reduce((sum, item) => sum + item.total_questions, 0)}
               </p>
             </div>
@@ -185,13 +189,13 @@ export default function HistoryPage() {
 
         {/* History List */}
         {history.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
             <div className="text-6xl mb-4">📝</div>
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">Belum Ada History</h2>
-            <p className="text-gray-600 mb-6">Anda belum mengerjakan tryout apapun</p>
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">Belum Ada History</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">Anda belum mengerjakan tryout apapun</p>
             <button
               onClick={() => router.push('/dashboard')}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              className="bg-blue-600 dark:bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
             >
               Mulai Tryout
             </button>
@@ -205,16 +209,16 @@ export default function HistoryPage() {
               return (
                 <div
                   key={item.id}
-                  className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200"
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700"
                 >
                   <div className="p-6">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                       {/* Left Section */}
                       <div className="flex-1 mb-4 md:mb-0">
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">
+                        <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
                           {item.tryout_title}
                         </h3>
-                        <div className="flex flex-wrap gap-3 text-sm text-gray-600">
+                        <div className="flex flex-wrap gap-3 text-sm text-gray-600 dark:text-gray-400">
                           <span className="flex items-center">
                             📅 {formatDate(item.created_at)}
                           </span>
@@ -237,26 +241,34 @@ export default function HistoryPage() {
                           <p className="text-sm font-medium">{percentage}%</p>
                         </div>
 
-                        <button
-                          onClick={() => handleViewReview(item.id, item.tryout_id)}
-                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                        >
-                          <span>Lihat Review</span>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
+                        <div className="flex flex-col gap-2">
+                          <button
+                            onClick={() => handleViewReview(item.id, item.tryout_id)}
+                            className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center gap-2 text-sm"
+                          >
+                            <span>📝</span>
+                            <span>Review</span>
+                          </button>
+                          <button
+                            onClick={() => handleViewRanking(item.tryout_id)}
+                            className="bg-purple-600 dark:bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors flex items-center gap-2 text-sm"
+                          >
+                            <span>🏆</span>
+                            <span>Ranking</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
 
                     {/* Progress Bar */}
                     <div className="mt-4">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                         <div
                           className={`h-2 rounded-full transition-all ${
-                            percentage >= 80 ? 'bg-green-500' :
-                            percentage >= 60 ? 'bg-blue-500' :
-                            percentage >= 40 ? 'bg-yellow-500' : 'bg-red-500'
+                            percentage >= 80 ? 'bg-green-500 dark:bg-green-400' :
+                            percentage >= 60 ? 'bg-blue-500 dark:bg-blue-400' :
+                            percentage >= 40 ? 'bg-yellow-500 dark:bg-yellow-400' : 
+                            'bg-red-500 dark:bg-red-400'
                           }`}
                           style={{ width: `${percentage}%` }}
                         ></div>
