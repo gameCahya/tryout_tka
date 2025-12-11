@@ -213,6 +213,40 @@ export default function UserDashboardPage() {
             </div>
           </div>
         </div>
+        {tryouts.map((tryout) => {
+  const status = getTryoutStatus(tryout.start_time, tryout.end_time);
+  
+  return (
+    <div key={tryout.id} className="bg-white dark:bg-gray-800 p-6 rounded-xl ...">
+      {/* existing content */}
+      
+      {/* Tambahkan ini di bagian button actions, setelah tombol "Mulai Tryout" */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => router.push(`/tryout/${tryout.id}`)}
+          disabled={status.status !== 'available'}
+          className={`flex-1 px-4 py-2.5 rounded-lg font-medium transition-colors ${
+            status.status === 'available'
+              ? 'bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600'
+              : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          {status.status === 'upcoming' ? 'Belum Dimulai' : status.status === 'ended' ? 'Sudah Berakhir' : 'Mulai Tryout'}
+        </button>
+        
+        {/* TOMBOL RANKING BARU */}
+        <button
+          onClick={() => router.push(`/tryout/${tryout.id}/ranking`)}
+          className="px-4 py-2.5 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors flex items-center gap-2"
+          title="Lihat Ranking"
+        >
+          <span>🏆</span>
+          <span className="hidden sm:inline">Ranking</span>
+        </button>
+      </div>
+    </div>
+  );
+})}
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
@@ -345,6 +379,7 @@ export default function UserDashboardPage() {
                       >
                         {status.status === 'upcoming' ? 'Belum Dimulai' : status.status === 'ended' ? 'Sudah Berakhir' : 'Mulai Tryout'}
                       </button>
+                      
                     </div>
                   </div>
                 );

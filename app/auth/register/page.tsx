@@ -81,76 +81,60 @@ export default function RegisterPage() {
   };
 
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
 
-    const cleanPhoneNum = cleanPhone(phone);
-    if (!fullName || !cleanPhoneNum || !school || !password) {
-      setError('Semua field wajib diisi');
-      setLoading(false);
-      return;
-    }
+  const cleanPhoneNum = cleanPhone(phone);
+  if (!fullName || !cleanPhoneNum || !school || !password) {
+    setError('Semua field wajib diisi');
+    setLoading(false);
+    return;
+  }
 
-    if (password.length < 6) {
-      setError('Password minimal 6 karakter');
-      setLoading(false);
-      return;
-    }
+  if (password.length < 6) {
+    setError('Password minimal 6 karakter');
+    setLoading(false);
+    return;
+  }
 
-    const fakeEmail = `${cleanPhoneNum}@tryout.id`;
+  const fakeEmail = `${cleanPhoneNum}@tryout.id`;
 
-    try {
-      // 1. SignUp
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: fakeEmail,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            phone: cleanPhoneNum,
-            school: school,
-          },
-        },
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Registrasi gagal');
-
-      // 2. Login otomatis
-      const { error: loginError } = await supabase.auth.signInWithPassword({
-        email: fakeEmail,
-        password,
-      });
-
-      if (loginError) throw loginError;
-
-      // 3. Insert ke profiles
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
+  try {
+    // SignUp saja - trigger otomatis handle profiles
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: fakeEmail,
+      password,
+      options: {
+        data: {
           full_name: fullName,
           phone: cleanPhoneNum,
           school: school,
-        });
+        },
+      },
+    });
 
-      if (profileError) throw profileError;
+    if (authError) throw authError;
+    if (!authData.user) throw new Error('Registrasi gagal');
 
-      // 4. Kirim WhatsApp selamat datang ke user
-      await sendWelcomeWA(cleanPhoneNum, fullName);
+    // HAPUS BAGIAN INI - tidak perlu manual insert profiles lagi
+    // const { error: profileError } = await supabase
+    //   .from('profiles')
+    //   .insert({ ... });
 
-      // 5. Kirim notifikasi pendaftaran ke admin
-      await sendRegistrationNotification(fullName, cleanPhoneNum, school);
+    // Kirim WhatsApp
+    await sendWelcomeWA(cleanPhoneNum, fullName);
+    await sendRegistrationNotification(fullName, cleanPhoneNum, school);
 
-      // Redirect
-      router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Gagal mendaftar');
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Redirect
+    router.push('/dashboard');
+  } catch (err: any) {
+    console.error('Registration error:', err);
+    setError(err.message || 'Gagal mendaftar');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
