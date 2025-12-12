@@ -1,3 +1,4 @@
+// app/history/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -190,7 +191,7 @@ export default function HistoryPage() {
         {/* History List */}
         {history.length === 0 ? (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
-            <div className="text-6xl mb-4">📝</div>
+            <div className="text-6xl mb-4">📋</div>
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">Belum Ada History</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">Anda belum mengerjakan tryout apapun</p>
             <button
