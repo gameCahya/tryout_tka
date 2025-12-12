@@ -2,8 +2,26 @@
 'use client';
 
 import { useState } from 'react';
-import { Question } from '@/types/tryout';
-import { UserAnswer } from '@/types/review';
+
+// Types
+type Question = {
+  id: string;
+  question_text: string;
+  options: string[];
+  correct_answer_index: number;
+  correct_answers: number[] | null;
+  reasoning_answers: { [key: number]: 'benar' | 'salah' } | null;
+  question_type: 'single' | 'multiple' | 'reasoning';
+  explanation: string;
+};
+
+type UserAnswer = {
+  question_id: string;
+  user_answer: number;
+  user_answers: number[];
+  user_reasoning: { [key: number]: 'benar' | 'salah' };
+  is_correct: boolean;
+};
 
 type ReviewQuestionCardProps = {
   question: Question;
