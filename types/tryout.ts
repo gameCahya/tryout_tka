@@ -2,18 +2,17 @@
 
 export type Question = {
   id: string;
-  tryout_id: string;
   question_text: string;
   options: string[];
   correct_answer_index: number;
-  correct_answers: number[] | null;
-  reasoning_answers: { [key: number]: 'benar' | 'salah' } | null;
-  question_type: 'single' | 'multiple' | 'reasoning';
-  explanation: string;
-  created_at: string;
-  category_id: string | null;
+  correct_answers?: number[] | null;
+  question_type?: string;
+  reasoning_answers?: { [key: number]: 'benar' | 'salah' } | null;
+  explanation?: string;
+  image_url?: string | null;
+  tryout_id?: string;
+  created_at?: string;
 };
-
 
 export type AnswerState = {
   answers: number[];
@@ -22,4 +21,3 @@ export type AnswerState = {
 };
 
 export type QuestionStatus = 'answered' | 'current' | 'unanswered';
-
