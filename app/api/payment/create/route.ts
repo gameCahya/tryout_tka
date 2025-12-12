@@ -56,12 +56,15 @@ export async function POST(request: NextRequest) {
       expiryPeriod: 60, // 60 minutes
     });
 
-    if (!duitkuResponse.success) {
+    if (!duitkuResponse.success || !duitkuResponse.data) {
       return NextResponse.json(
         { error: duitkuResponse.error || 'Failed to create payment' },
         { status: 500 }
       );
     }
+
+    // Type assertion after checking success and data existence
+    const paymentData = duitkuResponse.data;
 
     // Calculate expiry time (60 minutes from now)
     const expiredAt = new Date();
@@ -74,12 +77,12 @@ export async function POST(request: NextRequest) {
         user_id: userId,
         tryout_id: tryoutId,
         merchant_order_id: merchantOrderId,
-        payment_reference: duitkuResponse.data.reference,
+        payment_reference: paymentData.reference,
         payment_amount: paymentAmount,
         payment_status: 'pending',
-        payment_url: duitkuResponse.data.paymentUrl,
-        va_number: duitkuResponse.data.vaNumber,
-        qr_string: duitkuResponse.data.qrString,
+        payment_url: paymentData.paymentUrl,
+        va_number: paymentData.vaNumber,
+        qr_string: paymentData.qrString,
         email,
         expired_at: expiredAt.toISOString(),
         created_at: new Date().toISOString(),
@@ -98,8 +101,8 @@ export async function POST(request: NextRequest) {
       success: true,
       data: {
         merchantOrderId,
-        reference: duitkuResponse.data.reference,
-        paymentUrl: duitkuResponse.data.paymentUrl,
+        reference: paymentData.reference,
+        paymentUrl: paymentData.paymentUrl,
         amount: paymentAmount,
         expiryTime: expiredAt.toISOString(),
       },

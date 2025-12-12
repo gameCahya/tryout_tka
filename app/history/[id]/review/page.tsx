@@ -1,3 +1,4 @@
+// app/history/[id]/review/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -24,6 +25,8 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
   const [loading, setLoading] = useState(true);
   const [hasPaid, setHasPaid] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   // Resolve params
   useEffect(() => {
@@ -48,6 +51,22 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
       }
 
       try {
+        // Fetch user profile
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('full_name, phone')
+          .eq('id', session.user.id)
+          .single();
+
+        setUserProfile(profileData);
+
+        // Check payment status
+        const paymentResponse = await fetch(
+          `/api/payment/status?userId=${session.user.id}&tryoutId=${tryoutId}`
+        );
+        const paymentData = await paymentResponse.json();
+        setHasPaid(paymentData.hasPaid || false);
+
         // Fetch result
         const { data: resultData, error: resultError } = await supabase
           .from('results')
@@ -103,7 +122,6 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
         });
 
         setUserAnswers(answersMap);
-        setHasPaid(false); // TODO: Check payment status
         setLoading(false);
       } catch (error) {
         console.error('Error fetching review data:', error);
@@ -115,8 +133,50 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
     fetchReviewData();
   }, [resultId, tryoutId, router]);
 
-  const handleUnlockClick = () => {
-    alert('Fitur pembayaran sedang dalam proses (Midtrans)');
+  const handleUnlockClick = async () => {
+    if (paymentLoading) return;
+
+    try {
+      setPaymentLoading(true);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/auth/login');
+        return;
+      }
+
+      // Create payment
+      const response = await fetch('/api/payment/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tryoutId,
+          userId: session.user.id,
+          email: session.user.email || 'user@example.com',
+          phoneNumber: userProfile?.phone || '08123456789',
+          customerName: userProfile?.full_name || 'User',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create payment');
+      }
+
+      // Redirect to payment page
+      if (data.data.paymentUrl) {
+        window.location.href = data.data.paymentUrl;
+      } else {
+        throw new Error('Payment URL not found');
+      }
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      alert(error.message || 'Gagal membuat pembayaran');
+      setPaymentLoading(false);
+    }
   };
 
   if (loading) {
@@ -154,6 +214,12 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
                 <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
                   <span>Skor: <strong className="text-blue-600 dark:text-blue-400">{result?.score}/{result?.total_questions}</strong></span>
                   <span>Persentase: <strong className="text-green-600 dark:text-green-400">{((result?.score / result?.total_questions) * 100).toFixed(1)}%</strong></span>
+                  {hasPaid && (
+                    <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                      <span>✓</span>
+                      <strong>Pembahasan Terbuka</strong>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

@@ -5,7 +5,7 @@ export class Duitku {
   private static merchantCode = process.env.NEXT_PUBLIC_DUITKU_MERCHANT_CODE;
   private static apiKey = process.env.DUITKU_API_KEY;
   private static merchantKey = process.env.DUITKU_MERCHANT_KEY;
-  private static baseUrl = process.env.NEXT_PUBLIC_DUITKU_MODE === 'sandbox'
+  private static baseUrl = process.env.NEXT_PUBLIC_DUITKU_MODE === 'production'
     ? process.env.DUITKU_PRODUCTION_URL
     : process.env.DUITKU_SANDBOX_URL;
 
@@ -51,7 +51,10 @@ export class Duitku {
     callbackUrl: string;
     returnUrl: string;
     expiryPeriod?: number;
-  }) {
+  }): Promise<
+    | { success: true; data: { merchantOrderId: string; reference: string; paymentUrl: string; vaNumber?: string; qrString?: string; amount: number } }
+    | { success: false; error: string; data?: never }
+  > {
     const {
       paymentAmount,
       merchantOrderId,
@@ -118,7 +121,10 @@ export class Duitku {
   /**
    * Check transaction status
    */
-  static async checkTransactionStatus(merchantOrderId: string) {
+  static async checkTransactionStatus(merchantOrderId: string): Promise<
+    | { success: true; data: { merchantOrderId: string; reference: string; amount: number; fee: number; statusCode: string; statusMessage: string } }
+    | { success: false; error: string; data?: never }
+  > {
     const signature = crypto
       .createHash('md5')
       .update(`${this.merchantCode}${merchantOrderId}${this.merchantKey}`)
