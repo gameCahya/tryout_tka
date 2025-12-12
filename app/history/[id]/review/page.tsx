@@ -27,16 +27,15 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [error, setError] = useState<string>('');
 
-  // Single useEffect to handle everything
   useEffect(() => {
     const fetchReviewData = async () => {
       try {
-        // 1. Resolve params first
+        // 1. Resolve params
         const resolvedParams = await params;
         const resolvedSearchParams = await searchParams;
         const resultId = resolvedParams.id;
         
-        console.log('Resolved params:', { resultId, searchParams: resolvedSearchParams });
+        console.log('🔍 Step 1: Resolved params', { resultId, searchParams: resolvedSearchParams });
 
         if (!resultId) {
           throw new Error('Result ID tidak ditemukan');
@@ -44,17 +43,24 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
 
         // 2. Check auth
         const { data: { session } } = await supabase.auth.getSession();
+        console.log('🔍 Step 2: Auth check', { hasSession: !!session, userId: session?.user?.id });
+        
         if (!session) {
           router.push('/auth/login');
           return;
         }
 
         // 3. Fetch user profile
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('full_name, phone')
           .eq('id', session.user.id)
           .single();
+
+        console.log('🔍 Step 3: User profile', { 
+          profileData, 
+          profileError: profileError?.message 
+        });
 
         setUserProfile(profileData);
 
@@ -65,19 +71,26 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
           .eq('id', resultId)
           .single();
 
-        console.log('Result data:', resultData, 'Error:', resultError);
+        console.log('🔍 Step 4: Result data', { 
+          resultData, 
+          resultError: resultError?.message 
+        });
 
         if (resultError || !resultData) {
           throw new Error('Hasil tryout tidak ditemukan');
         }
 
-        // 5. Get tryout_id (from searchParams or result)
+        // 5. Get tryout_id
         const tryoutId = resolvedSearchParams.tryout_id || resultData.tryout_id;
         
-        console.log('Using tryout_id:', tryoutId);
+        console.log('🔍 Step 5: Tryout ID', { 
+          fromSearchParams: resolvedSearchParams.tryout_id,
+          fromResult: resultData.tryout_id,
+          finalTryoutId: tryoutId 
+        });
 
         if (!tryoutId) {
-          throw new Error('Tryout ID tidak ditemukan');
+          throw new Error('Tryout ID tidak ditemukan di result maupun searchParams');
         }
 
         // 6. Check payment status
@@ -85,20 +98,36 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
           `/api/payment/status?userId=${session.user.id}&tryoutId=${tryoutId}`
         );
         const paymentData = await paymentResponse.json();
+        
+        console.log('🔍 Step 6: Payment status', { 
+          statusCode: paymentResponse.status,
+          paymentData 
+        });
+        
         setHasPaid(paymentData.hasPaid || false);
 
         // 7. Fetch tryout title
-        const { data: tryoutData } = await supabase
+        const { data: tryoutData, error: tryoutError } = await supabase
           .from('tryouts')
           .select('title')
           .eq('id', tryoutId)
           .single();
 
-        setResult({
-          ...resultData,
-          tryout_id: tryoutId, // Store for payment
-          tryouts: { title: tryoutData?.title || 'Tryout' }
+        console.log('🔍 Step 7: Tryout data', { 
+          tryoutData, 
+          tryoutError: tryoutError?.message 
         });
+
+        // IMPORTANT: Store tryout_id in result for payment
+        const finalResult = {
+          ...resultData,
+          tryout_id: tryoutId, // ✅ This is crucial for payment
+          tryouts: { title: tryoutData?.title || 'Tryout' }
+        };
+
+        console.log('🔍 Step 8: Final result object', finalResult);
+        
+        setResult(finalResult);
 
         // 8. Fetch questions
         const { data: questionsData, error: questionsError } = await supabase
@@ -107,7 +136,10 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
           .eq('tryout_id', tryoutId)
           .order('created_at', { ascending: true });
 
-        console.log('Questions:', questionsData?.length, 'Error:', questionsError);
+        console.log('🔍 Step 9: Questions', { 
+          count: questionsData?.length, 
+          questionsError: questionsError?.message 
+        });
 
         if (questionsError) {
           throw new Error('Gagal memuat soal: ' + questionsError.message);
@@ -125,7 +157,10 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
           .select('*')
           .eq('result_id', resultId);
 
-        console.log('User answers:', userAnswersData?.length, 'Error:', answersError);
+        console.log('🔍 Step 10: User answers', { 
+          count: userAnswersData?.length, 
+          answersError: answersError?.message 
+        });
 
         const answersMap = new Map<string, UserAnswer>();
         userAnswersData?.forEach((ans: any) => {
@@ -140,13 +175,14 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
 
         setUserAnswers(answersMap);
         setLoading(false);
+        
+        console.log('✅ All data loaded successfully');
 
       } catch (error: any) {
-        console.error('Error fetching review data:', error);
+        console.error('❌ Error fetching review data:', error);
         setError(error.message || 'Gagal memuat data review');
         setLoading(false);
         
-        // Show error for 3 seconds then redirect
         setTimeout(() => {
           router.push('/history');
         }, 3000);
@@ -157,53 +193,83 @@ export default function ReviewPage({ params, searchParams }: ReviewPageProps) {
   }, [params, searchParams, router]);
 
   const handleUnlockClick = async () => {
-    if (paymentLoading || !result) return;
+    if (paymentLoading || !result) {
+      console.warn('⚠️ Payment blocked:', { paymentLoading, hasResult: !!result });
+      return;
+    }
 
     try {
       setPaymentLoading(true);
+      
+      console.log('💳 Starting payment process...');
 
+      // 1. Check session
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('💳 Step 1: Session check', { 
+        hasSession: !!session, 
+        userId: session?.user?.id 
+      });
+      
       if (!session) {
         router.push('/auth/login');
         return;
       }
 
+      // 2. Get tryout ID from result
       const tryoutId = result.tryout_id;
+      
+      console.log('💳 Step 2: Tryout ID', { 
+        tryoutId,
+        resultObject: result 
+      });
 
       if (!tryoutId) {
-        throw new Error('Tryout ID tidak ditemukan');
+        throw new Error('Tryout ID tidak ditemukan dalam result object');
       }
 
-      // Create payment
+      // 3. Prepare payment data
+      const paymentPayload = {
+        tryoutId,
+        userId: session.user.id,
+        email: session.user.email || 'user@example.com',
+        phoneNumber: userProfile?.phone || '08123456789',
+        customerName: userProfile?.full_name || 'User',
+      };
+
+      console.log('💳 Step 3: Payment payload', paymentPayload);
+
+      // 4. Create payment
       const response = await fetch('/api/payment/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          tryoutId,
-          userId: session.user.id,
-          email: session.user.email || 'user@example.com',
-          phoneNumber: userProfile?.phone || '08123456789',
-          customerName: userProfile?.full_name || 'User',
-        }),
+        body: JSON.stringify(paymentPayload),
+      });
+
+      console.log('💳 Step 4: API response', { 
+        status: response.status,
+        statusText: response.statusText 
       });
 
       const data = await response.json();
+      console.log('💳 Step 5: Response data', data);
 
       if (!response.ok) {
-        throw new Error(data.error || 'Gagal membuat pembayaran');
+        throw new Error(data.error || `Payment API error: ${response.status}`);
       }
 
-      // Redirect to payment page
+      // 5. Redirect to payment
       if (data.data?.paymentUrl) {
+        console.log('💳 Step 6: Redirecting to payment URL', data.data.paymentUrl);
         window.location.href = data.data.paymentUrl;
       } else {
-        throw new Error('Payment URL tidak ditemukan');
+        throw new Error('Payment URL tidak ditemukan dalam response');
       }
+      
     } catch (error: any) {
-      console.error('Payment error:', error);
-      alert(error.message || 'Gagal membuat pembayaran');
+      console.error('❌ Payment error:', error);
+      alert(`Error: ${error.message || 'Gagal membuat pembayaran'}`);
       setPaymentLoading(false);
     }
   };
