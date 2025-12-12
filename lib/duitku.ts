@@ -1,14 +1,17 @@
 // lib/duitku.ts
 import crypto from 'crypto';
 
-export class Duitku {
-  private static merchantCode = process.env.NEXT_PUBLIC_DUITKU_MERCHANT_CODE;
-  private static apiKey = process.env.DUITKU_API_KEY;
-  private static merchantKey = process.env.DUITKU_MERCHANT_KEY;
-  private static baseUrl = process.env.NEXT_PUBLIC_DUITKU_MODE === 'production'
-    ? process.env.DUITKU_PRODUCTION_URL
-    : process.env.DUITKU_SANDBOX_URL;
+// Duitku Configuration
+const config = {
+  merchantCode: process.env.NEXT_PUBLIC_DUITKU_MERCHANT_CODE || '',
+  apiKey: process.env.DUITKU_API_KEY || '',
+  merchantKey: process.env.DUITKU_MERCHANT_KEY || '',
+  baseUrl: process.env.NEXT_PUBLIC_DUITKU_MODE === 'production'
+    ? 'https://passport.duitku.com/webapi/api/merchant'
+    : 'https://sandbox.duitku.com/webapi/api/merchant',
+};
 
+export class Duitku {
   /**
    * Generate signature for Duitku API
    */
@@ -18,7 +21,7 @@ export class Duitku {
   ): string {
     const signature = crypto
       .createHash('md5')
-      .update(`${this.merchantCode}${merchantOrderId}${amount}${this.merchantKey}`)
+      .update(`${config.merchantCode}${merchantOrderId}${amount}${config.merchantKey}`)
       .digest('hex');
     return signature;
   }
@@ -33,7 +36,7 @@ export class Duitku {
   ): string {
     const signature = crypto
       .createHash('md5')
-      .update(`${merchantCode}${amount}${merchantOrderId}${this.merchantKey}`)
+      .update(`${merchantCode}${amount}${merchantOrderId}${config.merchantKey}`)
       .digest('hex');
     return signature;
   }
@@ -64,13 +67,13 @@ export class Duitku {
       customerName,
       callbackUrl,
       returnUrl,
-      expiryPeriod = 60, // default 60 minutes
+      expiryPeriod = 60,
     } = params;
 
     const signature = this.generateSignature(merchantOrderId, paymentAmount);
 
     const requestBody = {
-      merchantCode: this.merchantCode,
+      merchantCode: config.merchantCode,
       paymentAmount,
       merchantOrderId,
       productDetails,
@@ -83,8 +86,15 @@ export class Duitku {
       expiryPeriod,
     };
 
+    console.log('🔵 Duitku Request:', {
+      merchantCode: config.merchantCode,
+      merchantOrderId,
+      paymentAmount,
+      signature: signature.substring(0, 10) + '...',
+    });
+
     try {
-      const response = await fetch(`${this.baseUrl}/createInvoice`, {
+      const response = await fetch(`${config.baseUrl}/createInvoice`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -94,8 +104,14 @@ export class Duitku {
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.Message || 'Failed to create invoice');
+      console.log('🔵 Duitku Response:', {
+        statusCode: data.statusCode,
+        statusMessage: data.statusMessage,
+        hasPaymentUrl: !!data.paymentUrl,
+      });
+
+      if (!response.ok || data.statusCode !== '00') {
+        throw new Error(data.statusMessage || 'Failed to create invoice');
       }
 
       return {
@@ -110,7 +126,7 @@ export class Duitku {
         },
       };
     } catch (error: any) {
-      console.error('Duitku createInvoice error:', error);
+      console.error('❌ Duitku createInvoice error:', error);
       return {
         success: false,
         error: error.message || 'Failed to create invoice',
@@ -127,17 +143,17 @@ export class Duitku {
   > {
     const signature = crypto
       .createHash('md5')
-      .update(`${this.merchantCode}${merchantOrderId}${this.merchantKey}`)
+      .update(`${config.merchantCode}${merchantOrderId}${config.merchantKey}`)
       .digest('hex');
 
     try {
-      const response = await fetch(`${this.baseUrl}/transactionStatus`, {
+      const response = await fetch(`${config.baseUrl}/transactionStatus`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          merchantCode: this.merchantCode,
+          merchantCode: config.merchantCode,
           merchantOrderId,
           signature,
         }),
