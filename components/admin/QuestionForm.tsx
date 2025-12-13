@@ -4,9 +4,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import AnswerSelector from './AnswerSelector';
 import TableBuilder from './TableBuilder';
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import TextAlign from '@tiptap/extension-text-align';
+import RichTextEditor from './editor/RichTextEditor';
+import OptionsManager from './form/OptionsManager';
 
 type Tryout = { id: string; title: string };
 
@@ -56,61 +55,10 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   const [tableRows, setTableRows] = useState<string[][]>([
     ['No Soal', 'Kompetensi', 'Sub Kompetensi', 'Bentuk Soal', 'Kunci'],
     ['', '', '', '', '']
   ]);
-
-  // Tiptap Editor for Question Text with Text Align
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      TextAlign.configure({
-        types: ['heading', 'paragraph'],
-        alignments: ['left', 'center', 'right', 'justify'],
-        defaultAlignment: 'left',
-      }),
-    ],
-    content: form.question_text,
-    editorProps: {
-      attributes: {
-        class: 'prose dark:prose-invert max-w-none focus:outline-none min-h-[150px] p-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white',
-      },
-    },
-    immediatelyRender: false,
-    onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
-      setForm(prev => ({ ...prev, question_text: html }));
-    },
-  });
-
-  // Tiptap Editor for Explanation with Text Align
-  const explanationEditor = useEditor({
-    extensions: [
-      StarterKit,
-      TextAlign.configure({
-        types: ['heading', 'paragraph'],
-        alignments: ['left', 'center', 'right', 'justify'],
-        defaultAlignment: 'left',
-      }),
-    ],
-    content: form.explanation,
-    editorProps: {
-      attributes: {
-        class: 'prose dark:prose-invert max-w-none focus:outline-none min-h-[100px] p-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white',
-      },
-    },
-    immediatelyRender: false,
-    onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
-      setForm(prev => ({ ...prev, explanation: html }));
-    },
-  });
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   useEffect(() => {
     if (editingQuestion) {
@@ -125,67 +73,44 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
         question_type: editingQuestion.question_type,
         reasoning_answers: editingQuestion.reasoning_answers || {},
       });
-      
-      if (editor) editor.commands.setContent(editingQuestion.question_text);
-      if (explanationEditor) explanationEditor.commands.setContent(editingQuestion.explanation);
     } else {
-      setForm({
-        tryout_id: '',
-        question_text: '',
-        options: ['', ''],
-        correct_answer_index: 0,
-        correct_answers: [],
-        explanation: '',
-        has_table: false,
-        question_type: 'single',
-        reasoning_answers: {},
-      });
-      
-      if (editor) editor.commands.setContent('');
-      if (explanationEditor) explanationEditor.commands.setContent('');
+      resetForm();
     }
-  }, [editingQuestion, editor, explanationEditor]);
+  }, [editingQuestion]);
 
-  const handleOptionChange = (index: number, value: string) => {
-    const newOptions = [...form.options];
-    newOptions[index] = value;
-    setForm({ ...form, options: newOptions });
+  const resetForm = () => {
+    setForm({
+      tryout_id: '',
+      question_text: '',
+      options: ['', ''],
+      correct_answer_index: 0,
+      correct_answers: [],
+      explanation: '',
+      has_table: false,
+      question_type: 'single',
+      reasoning_answers: {},
+    });
+    setImageFile(null);
+    setTableRows([
+      ['No Soal', 'Kompetensi', 'Sub Kompetensi', 'Bentuk Soal', 'Kunci'],
+      ['', '', '', '', '']
+    ]);
   };
 
-  // Add new option
-  const addOption = () => {
-    setForm({ ...form, options: [...form.options, ''] });
-  };
-
-  // Remove option
-  const removeOption = (index: number) => {
-    if (form.options.length <= 1) {
-      alert('Minimal harus ada 1 pilihan jawaban');
-      return;
-    }
-
-    const newOptions = form.options.filter((_, i) => i !== index);
-    
-    // Adjust correct_answer_index if needed
+  const handleOptionsChange = (newOptions: string[]) => {
+    // Adjust correct answers when options change
     let newCorrectIndex = form.correct_answer_index;
-    if (form.correct_answer_index === index) {
-      newCorrectIndex = 0; // Reset to first option
-    } else if (form.correct_answer_index > index) {
-      newCorrectIndex = form.correct_answer_index - 1;
+    if (newCorrectIndex >= newOptions.length) {
+      newCorrectIndex = Math.max(0, newOptions.length - 1);
     }
 
-    // Adjust correct_answers for multiple choice
-    const newCorrectAnswers = form.correct_answers
-      .filter(ans => ans !== index)
-      .map(ans => ans > index ? ans - 1 : ans);
-
-    // Adjust reasoning_answers
+    const newCorrectAnswers = form.correct_answers.filter(ans => ans < newOptions.length);
+    
     const newReasoningAnswers: { [key: number]: 'benar' | 'salah' } = {};
     Object.keys(form.reasoning_answers).forEach((key) => {
       const keyNum = parseInt(key);
-      if (keyNum !== index) {
-        const newKey = keyNum > index ? keyNum - 1 : keyNum;
-        newReasoningAnswers[newKey] = form.reasoning_answers[keyNum];
+      if (keyNum < newOptions.length) {
+        newReasoningAnswers[keyNum] = form.reasoning_answers[keyNum];
       }
     });
 
@@ -237,7 +162,7 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
         imageUrl = publicUrlData.publicUrl;
       }
 
-      let questionText = editor ? editor.getHTML() : form.question_text;
+      let questionText = form.question_text;
       
       if (form.has_table) {
         questionText += generateTableMarkdown();
@@ -250,12 +175,12 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
       const dataToSave: any = {
         tryout_id: form.tryout_id,
         question_text: questionText,
-        options: form.options.filter(opt => opt.trim() !== ''), // Remove empty options
+        options: form.options.filter(opt => opt.trim() !== ''),
         correct_answer_index: form.question_type === 'single' ? form.correct_answer_index : -1,
         correct_answers: form.question_type === 'multiple' ? form.correct_answers : null,
         question_type: form.question_type,
         reasoning_answers: form.question_type === 'reasoning' ? form.reasoning_answers : null,
-        explanation: explanationEditor ? explanationEditor.getHTML() : form.explanation,
+        explanation: form.explanation,
       };
 
       if (editingQuestion) {
@@ -271,27 +196,7 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
         alert('Soal berhasil ditambahkan!');
       }
 
-      setForm({
-        tryout_id: '',
-        question_text: '',
-        options: ['', ''],
-        correct_answer_index: 0,
-        correct_answers: [],
-        explanation: '',
-        has_table: false,
-        question_type: 'single',
-        reasoning_answers: {},
-      });
-      
-      if (editor) editor.commands.setContent('');
-      if (explanationEditor) explanationEditor.commands.setContent('');
-      
-      setImageFile(null);
-      setTableRows([
-        ['No Soal', 'Kompetensi', 'Sub Kompetensi', 'Bentuk Soal', 'Kunci'],
-        ['', '', '', '', '']
-      ]);
-
+      resetForm();
       onSuccess();
     } catch (err: any) {
       console.error(err);
@@ -304,7 +209,6 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
   const isFormValid = () => {
     if (!form.tryout_id) return false;
     
-    // Check if at least one option is filled
     const filledOptions = form.options.filter(o => o.trim() !== '');
     if (filledOptions.length === 0) return false;
     
@@ -316,47 +220,9 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
     return true;
   };
 
-  // Toolbar Button Component
-  const ToolbarButton = ({ 
-    onClick, 
-    isActive, 
-    disabled, 
-    children,
-    title 
-  }: { 
-    onClick: () => void; 
-    isActive?: boolean; 
-    disabled?: boolean; 
-    children: React.ReactNode;
-    title?: string;
-  }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      className={`px-3 py-1 rounded transition-colors ${
-        isActive
-          ? 'bg-blue-600 text-white'
-          : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-500'
-      } disabled:opacity-50 disabled:cursor-not-allowed`}
-    >
-      {children}
-    </button>
-  );
-
-  if (!isMounted) {
-    return (
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg animate-pulse">
-        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
-        <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
-        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
-      </div>
-    );
-  }
-
   return (
     <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 transition-colors">
+      {/* Edit Mode Banner */}
       {editingQuestion && (
         <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded flex items-center justify-between">
           <span className="text-yellow-800 dark:text-yellow-300 font-medium">✏️ Mode Edit Soal</span>
@@ -370,6 +236,7 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
         </div>
       )}
 
+      {/* Tryout Selector */}
       <div className="mb-4">
         <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Tryout</label>
         <select
@@ -386,138 +253,19 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
         </select>
       </div>
 
-      {/* Rich Text Editor for Question */}
+      {/* Question Text Editor */}
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
-          Teks Soal
-        </label>
-        
-        {editor && (
-          <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-            {/* Toolbar */}
-            <div className="flex flex-wrap gap-2 p-2 border-b border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
-              <ToolbarButton
-                onClick={() => editor.chain().focus().toggleBold().run()}
-                isActive={editor.isActive('bold')}
-                title="Bold"
-              >
-                <strong>B</strong>
-              </ToolbarButton>
-
-              <ToolbarButton
-                onClick={() => editor.chain().focus().toggleItalic().run()}
-                isActive={editor.isActive('italic')}
-                title="Italic"
-              >
-                <em>I</em>
-              </ToolbarButton>
-
-              <ToolbarButton
-                onClick={() => editor.chain().focus().toggleStrike().run()}
-                isActive={editor.isActive('strike')}
-                title="Strikethrough"
-              >
-                <s>S</s>
-              </ToolbarButton>
-
-              <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
-
-              <ToolbarButton
-                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-                isActive={editor.isActive('heading', { level: 2 })}
-                title="Heading 2"
-              >
-                H2
-              </ToolbarButton>
-
-              <ToolbarButton
-                onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-                isActive={editor.isActive('heading', { level: 3 })}
-                title="Heading 3"
-              >
-                H3
-              </ToolbarButton>
-
-              <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
-
-              <ToolbarButton
-                onClick={() => editor.chain().focus().setTextAlign('left').run()}
-                isActive={editor.isActive({ textAlign: 'left' })}
-                title="Align Left"
-              >
-                ⬅️
-              </ToolbarButton>
-
-              <ToolbarButton
-                onClick={() => editor.chain().focus().setTextAlign('center').run()}
-                isActive={editor.isActive({ textAlign: 'center' })}
-                title="Align Center"
-              >
-                ↔️
-              </ToolbarButton>
-
-              <ToolbarButton
-                onClick={() => editor.chain().focus().setTextAlign('right').run()}
-                isActive={editor.isActive({ textAlign: 'right' })}
-                title="Align Right"
-              >
-                ➡️
-              </ToolbarButton>
-
-              <ToolbarButton
-                onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-                isActive={editor.isActive({ textAlign: 'justify' })}
-                title="Justify"
-              >
-                ⬌
-              </ToolbarButton>
-
-              <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
-
-              <ToolbarButton
-                onClick={() => editor.chain().focus().toggleBulletList().run()}
-                isActive={editor.isActive('bulletList')}
-                title="Bullet List"
-              >
-                • List
-              </ToolbarButton>
-
-              <ToolbarButton
-                onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                isActive={editor.isActive('orderedList')}
-                title="Numbered List"
-              >
-                1. List
-              </ToolbarButton>
-
-              <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
-
-              <ToolbarButton
-                onClick={() => editor.chain().focus().undo().run()}
-                disabled={!editor.can().undo()}
-                title="Undo"
-              >
-                ↶
-              </ToolbarButton>
-
-              <ToolbarButton
-                onClick={() => editor.chain().focus().redo().run()}
-                disabled={!editor.can().redo()}
-                title="Redo"
-              >
-                ↷
-              </ToolbarButton>
-            </div>
-
-            <EditorContent editor={editor} />
-          </div>
-        )}
-        
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          💡 Gunakan toolbar untuk format text: <strong>bold</strong>, <em>italic</em>, heading, alignment, list, dll.
-        </p>
+        <RichTextEditor
+          content={form.question_text}
+          onChange={(content) => setForm({ ...form, question_text: content })}
+          label="Teks Soal"
+          minHeight="150px"
+          showAdvancedFormatting={true}
+          helperText="💡 Fitur: bold, italic, x² (pangkat), x₂ (subscript), alignment, lists"
+        />
       </div>
 
+      {/* Question Type */}
       <div className="mb-4">
         <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Tipe Soal</label>
         <select
@@ -531,6 +279,7 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
         </select>
       </div>
 
+      {/* Table Option */}
       <div className="mb-4">
         <label className="flex items-center">
           <input
@@ -550,6 +299,7 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
         />
       )}
 
+      {/* Image Upload */}
       <div className="mb-4">
         <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Gambar Soal (Opsional)</label>
         <input
@@ -560,53 +310,13 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
         />
       </div>
 
-      {/* Dynamic Options */}
-      <div className="mb-4">
-        <div className="flex justify-between items-center mb-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Pilihan Jawaban (Minimal 1)
-          </label>
-          <button
-            type="button"
-            onClick={addOption}
-            className="text-sm bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded transition-colors"
-          >
-            ➕ Tambah Opsi
-          </button>
-        </div>
-        
-        <div className="space-y-2">
-          {form.options.map((option, idx) => (
-            <div key={idx} className="flex items-center gap-2">
-              <span className="w-8 text-center font-medium text-gray-700 dark:text-gray-300">
-                {String.fromCharCode(65 + idx)}.
-              </span>
-              <input
-                type="text"
-                value={option}
-                onChange={(e) => handleOptionChange(idx, e.target.value)}
-                className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder={`Opsi ${String.fromCharCode(65 + idx)}`}
-              />
-              {form.options.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeOption(idx)}
-                  className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
-                  title="Hapus opsi"
-                >
-                  🗑️
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-        
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-          💡 Klik "Tambah Opsi" untuk menambah pilihan jawaban. Minimal 1 opsi, maksimal tidak terbatas.
-        </p>
-      </div>
+      {/* Options Manager */}
+      <OptionsManager
+        options={form.options}
+        onChange={handleOptionsChange}
+      />
 
+      {/* Answer Selector */}
       <AnswerSelector
         questionType={form.question_type}
         options={form.options}
@@ -618,97 +328,18 @@ export default function QuestionForm({ tryouts, editingQuestion, onSuccess, onCa
         onReasoningAnswersChange={(answers) => setForm({ ...form, reasoning_answers: answers })}
       />
 
-      {/* Rich Text Editor for Explanation */}
+      {/* Explanation Editor */}
       <div className="mb-6">
-        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
-          Pembahasan
-        </label>
-        
-        {explanationEditor && (
-          <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-            <div className="flex flex-wrap gap-2 p-2 border-b border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
-              <ToolbarButton
-                onClick={() => explanationEditor.chain().focus().toggleBold().run()}
-                isActive={explanationEditor.isActive('bold')}
-                title="Bold"
-              >
-                <strong>B</strong>
-              </ToolbarButton>
-
-              <ToolbarButton
-                onClick={() => explanationEditor.chain().focus().toggleItalic().run()}
-                isActive={explanationEditor.isActive('italic')}
-                title="Italic"
-              >
-                <em>I</em>
-              </ToolbarButton>
-
-              <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
-
-              <ToolbarButton
-                onClick={() => explanationEditor.chain().focus().setTextAlign('left').run()}
-                isActive={explanationEditor.isActive({ textAlign: 'left' })}
-                title="Align Left"
-              >
-                ⬅️
-              </ToolbarButton>
-
-              <ToolbarButton
-                onClick={() => explanationEditor.chain().focus().setTextAlign('center').run()}
-                isActive={explanationEditor.isActive({ textAlign: 'center' })}
-                title="Align Center"
-              >
-                ↔️
-              </ToolbarButton>
-
-              <ToolbarButton
-                onClick={() => explanationEditor.chain().focus().setTextAlign('right').run()}
-                isActive={explanationEditor.isActive({ textAlign: 'right' })}
-                title="Align Right"
-              >
-                ➡️
-              </ToolbarButton>
-
-              <ToolbarButton
-                onClick={() => explanationEditor.chain().focus().setTextAlign('justify').run()}
-                isActive={explanationEditor.isActive({ textAlign: 'justify' })}
-                title="Justify"
-              >
-                ⬌
-              </ToolbarButton>
-
-              <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
-
-              <ToolbarButton
-                onClick={() => explanationEditor.chain().focus().toggleBulletList().run()}
-                isActive={explanationEditor.isActive('bulletList')}
-                title="Bullet List"
-              >
-                • List
-              </ToolbarButton>
-
-              <ToolbarButton
-                onClick={() => explanationEditor.chain().focus().undo().run()}
-                disabled={!explanationEditor.can().undo()}
-                title="Undo"
-              >
-                ↶
-              </ToolbarButton>
-
-              <ToolbarButton
-                onClick={() => explanationEditor.chain().focus().redo().run()}
-                disabled={!explanationEditor.can().redo()}
-                title="Redo"
-              >
-                ↷
-              </ToolbarButton>
-            </div>
-
-            <EditorContent editor={explanationEditor} />
-          </div>
-        )}
+        <RichTextEditor
+          content={form.explanation}
+          onChange={(content) => setForm({ ...form, explanation: content })}
+          label="Pembahasan"
+          minHeight="100px"
+          showAdvancedFormatting={false}
+        />
       </div>
 
+      {/* Action Buttons */}
       <div className="flex gap-2">
         <button
           type="submit"

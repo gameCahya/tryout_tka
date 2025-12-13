@@ -234,15 +234,7 @@ export default function UserDashboardPage() {
           {status.status === 'upcoming' ? 'Belum Dimulai' : status.status === 'ended' ? 'Sudah Berakhir' : 'Mulai Tryout'}
         </button>
         
-        {/* TOMBOL RANKING BARU */}
-        <button
-          onClick={() => router.push(`/tryout/${tryout.id}/ranking`)}
-          className="px-4 py-2.5 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors flex items-center gap-2"
-          title="Lihat Ranking"
-        >
-          <span>🏆</span>
-          <span className="hidden sm:inline">Ranking</span>
-        </button>
+        
       </div>
     </div>
   );
@@ -379,6 +371,15 @@ export default function UserDashboardPage() {
                       >
                         {status.status === 'upcoming' ? 'Belum Dimulai' : status.status === 'ended' ? 'Sudah Berakhir' : 'Mulai Tryout'}
                       </button>
+                      {/* TOMBOL RANKING BARU */}
+                    <button
+                      onClick={() => router.push(`/tryout/${tryout.id}/ranking`)}
+                      className="px-4 py-2.5 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors flex items-center gap-2"
+                      title="Lihat Ranking"
+                    >
+                      <span>🏆</span>
+                      <span className="hidden sm:inline">Ranking</span>
+                    </button>
                       
                     </div>
                   </div>
