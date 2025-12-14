@@ -1,5 +1,10 @@
 // app/tryout/[id]/components/ReasoningQuestion.tsx
 
+import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+import remarkGfm from 'remark-gfm';
+import { supabase } from '@/lib/supabase';
+
 type ReasoningQuestionProps = {
   options: string[];
   reasoningAnswers: { [key: number]: 'benar' | 'salah' };
@@ -11,6 +16,59 @@ export default function ReasoningQuestion({
   reasoningAnswers,
   onAnswerChange,
 }: ReasoningQuestionProps) {
+  const getImageUrl = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    const { data } = supabase.storage.from('questions').getPublicUrl(url);
+    return data.publicUrl;
+  };
+
+  const renderOption = (text: string) => {
+    return (
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}
+        components={{
+          img: ({node, src, alt, ...props}) => {
+            let imageSource: string | null = null;
+            
+            if (typeof src === 'string') {
+              imageSource = src;
+            } else if (src instanceof Blob) {
+              imageSource = URL.createObjectURL(src);
+            }
+            
+            const imageUrl = getImageUrl(imageSource || '');
+            if (!imageUrl) return null;
+            
+            return (
+              <img
+                src={imageUrl}
+                alt={alt || 'Statement'}
+                className="max-w-full h-auto my-2 rounded border dark:border-gray-600"
+                crossOrigin="anonymous"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+                {...props}
+              />
+            );
+          },
+          p: ({node, ...props}) => (
+            <span className="inline" {...props} />
+          ),
+          strong: ({node, ...props}) => (
+            <strong className="font-semibold" {...props} />
+          ),
+        }}
+      >
+        {text}
+      </ReactMarkdown>
+    );
+  };
+
   return (
     <>
       <div className="mb-3 inline-block bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-xs px-3 py-1 rounded-full font-medium">
@@ -52,7 +110,7 @@ export default function ReasoningQuestion({
                     {String.fromCharCode(65 + idx)}.
                   </td>
                   <td className="border border-gray-300 dark:border-gray-600 p-3 dark:text-gray-200">
-                    {option}
+                    {renderOption(option)}
                   </td>
                   <td className="border border-gray-300 dark:border-gray-600 p-3 text-center">
                     <button

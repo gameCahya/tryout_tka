@@ -1,5 +1,10 @@
 // app/tryout/[id]/components/SingleChoiceQuestion.tsx
 
+import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+import remarkGfm from 'remark-gfm';
+import { supabase } from '@/lib/supabase';
+
 type SingleChoiceQuestionProps = {
   options: string[];
   selectedAnswer: number;
@@ -11,6 +16,59 @@ export default function SingleChoiceQuestion({
   selectedAnswer,
   onAnswerSelect,
 }: SingleChoiceQuestionProps) {
+  const getImageUrl = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    const { data } = supabase.storage.from('questions').getPublicUrl(url);
+    return data.publicUrl;
+  };
+
+  const renderOption = (text: string) => {
+    return (
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}
+        components={{
+          img: ({node, src, alt, ...props}) => {
+            let imageSource: string | null = null;
+            
+            if (typeof src === 'string') {
+              imageSource = src;
+            } else if (src instanceof Blob) {
+              imageSource = URL.createObjectURL(src);
+            }
+            
+            const imageUrl = getImageUrl(imageSource || '');
+            if (!imageUrl) return null;
+            
+            return (
+              <img
+                src={imageUrl}
+                alt={alt || 'Option'}
+                className="max-w-full h-auto my-2 rounded border dark:border-gray-600"
+                crossOrigin="anonymous"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+                {...props}
+              />
+            );
+          },
+          p: ({node, ...props}) => (
+            <span className="inline" {...props} />
+          ),
+          strong: ({node, ...props}) => (
+            <strong className="font-semibold" {...props} />
+          ),
+        }}
+      >
+        {text}
+      </ReactMarkdown>
+    );
+  };
+
   return (
     <div className="space-y-3">
       {options.map((option, idx) => {
@@ -40,7 +98,8 @@ export default function SingleChoiceQuestion({
               </div>
             </div>
             <span className="flex-1">
-              <strong>{String.fromCharCode(65 + idx)}.</strong> {option}
+              <strong className="mr-1">{String.fromCharCode(65 + idx)}.</strong>
+              {renderOption(option)}
             </span>
           </button>
         );
