@@ -102,7 +102,7 @@ export default function UserTryoutResultsPage() {
 
       // Fetch tryout result
       const { data: resultData, error: resultError } = await supabase
-        .from('tryout_results')
+        .from('results') 
         .select('*')
         .eq('tryout_id', tryoutId)
         .eq('user_id', userId)
