@@ -32,3 +32,125 @@ img {
   margin: 1rem 0;
   border-radius: 0.5rem;
 }
+
+
+/* Tambahkan di app/globals.css atau buat file terpisah */
+
+/* Prose customization for better rendering */
+.prose {
+  color: inherit;
+}
+
+.prose strong {
+  color: inherit;
+  font-weight: 600;
+}
+
+.prose em {
+  color: inherit;
+  font-style: italic;
+}
+
+.prose ul,
+.prose ol {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose li {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.prose p {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose img {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 0.5rem;
+  max-width: 100%;
+  height: auto;
+}
+
+.prose table {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Math node styling */
+.tiptap-mathematics-render {
+  display: inline-block;
+  padding: 2px 4px;
+  margin: 0 2px;
+  border-radius: 4px;
+  background-color: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.dark .tiptap-mathematics-render {
+  background-color: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.tiptap-mathematics-render:hover {
+  background-color: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.tiptap-mathematics-render:hover::after {
+  content: "Double-click to edit";
+  position: absolute;
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.dark .tiptap-mathematics-render:hover::after {
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #1f2937;
+}
+
+.tiptap-mathematics-render--editable {
+  cursor: pointer;
+}
+
+.tiptap-mathematics-render[data-type="block-math"] {
+  display: block;
+  margin: 16px 0;
+  padding: 12px;
+  text-align: center;
+}
+
+.tiptap-mathematics-render[data-type="inline-math"] {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* KaTeX styling adjustments for dark mode */
+.dark .katex {
+  color: #e5e7eb;
+}
+
+.dark .katex .mord,
+.dark .katex .mbin,
+.dark .katex .mrel,
+.dark .katex .mopen,
+.dark .katex .mclose,
+.dark .katex .mpunct {
+  color: #e5e7eb;
+}

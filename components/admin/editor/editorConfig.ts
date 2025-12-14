@@ -6,6 +6,7 @@ import Subscript from '@tiptap/extension-subscript';
 import BulletList from '@tiptap/extension-bullet-list';
 import OrderedList from '@tiptap/extension-ordered-list';
 import ListItem from '@tiptap/extension-list-item';
+import Mathematics from '@tiptap/extension-mathematics';
 
 export const getEditorExtensions = () => [
   StarterKit.configure({
@@ -35,6 +36,13 @@ export const getEditorExtensions = () => [
   }),
   Superscript,
   Subscript,
+  // Mathematics will be configured with click handlers from RichTextEditor
+  Mathematics.configure({
+    katexOptions: {
+      throwOnError: false,
+      displayMode: false,
+    },
+  }),
 ];
 
 export const getEditorProps = (minHeight: string = '150px') => ({

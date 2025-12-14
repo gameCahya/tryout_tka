@@ -1,7 +1,7 @@
-// ============================================
-// FILE: components/admin/QuestionList.tsx
-// ============================================
+// components/admin/QuestionList.tsx
 'use client';
+
+import HTMLRenderer from './HTMLRenderer';
 
 type Tryout = { 
   id: string; 
@@ -111,7 +111,7 @@ export default function QuestionList({
             </div>
           </div>
 
-          {/* Question Cards - Inline */}
+          {/* Question Cards */}
           {questions.map((question, index) => (
             <div key={question.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md dark:hover:shadow-xl transition-shadow bg-white dark:bg-gray-800">
               <div className="flex justify-between items-start mb-3">
@@ -133,21 +133,27 @@ export default function QuestionList({
               </div>
 
               <div className="mb-3">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                   Tipe: <span className="font-medium text-gray-900 dark:text-white">{getQuestionTypeName(question.question_type)}</span>
                 </p>
-                <div className="prose max-w-none text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-                  {question.question_text}
-                </div>
+                <HTMLRenderer 
+                  content={question.question_text} 
+                  className="text-gray-800 dark:text-gray-200"
+                />
               </div>
 
               <div className="mb-3">
                 <p className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Pilihan:</p>
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {question.options.map((opt, idx) => (
-                    <div key={idx} className="flex items-start gap-2">
-                      <span className="font-medium text-gray-700 dark:text-gray-300">{String.fromCharCode(65 + idx)}.</span>
-                      <span className="text-gray-800 dark:text-gray-200">{opt}</span>
+                    <div key={idx} className="flex items-start gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
+                      <span className="font-medium text-gray-700 dark:text-gray-300 min-w-[24px]">
+                        {String.fromCharCode(65 + idx)}.
+                      </span>
+                      <HTMLRenderer 
+                        content={opt} 
+                        className="text-gray-800 dark:text-gray-200 flex-1"
+                      />
                     </div>
                   ))}
                 </div>
@@ -176,8 +182,11 @@ export default function QuestionList({
 
               {question.explanation && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
-                  <p className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">Pembahasan:</p>
-                  <p className="text-blue-700 dark:text-blue-400 text-sm">{question.explanation}</p>
+                  <p className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">Pembahasan:</p>
+                  <HTMLRenderer 
+                    content={question.explanation} 
+                    className="text-blue-700 dark:text-blue-400 text-sm"
+                  />
                 </div>
               )}
             </div>

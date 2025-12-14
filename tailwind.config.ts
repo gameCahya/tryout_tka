@@ -7,7 +7,50 @@ module.exports = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      typography: {
+        DEFAULT: {
+          css: {
+            maxWidth: 'none',
+            color: 'inherit',
+            a: {
+              color: '#3b82f6',
+              '&:hover': {
+                color: '#2563eb',
+              },
+            },
+            strong: {
+              color: 'inherit',
+            },
+            em: {
+              color: 'inherit',
+            },
+            code: {
+              color: 'inherit',
+            },
+            'ul > li': {
+              paddingLeft: '0',
+            },
+            'ol > li': {
+              paddingLeft: '0',
+            },
+          },
+        },
+        invert: {
+          css: {
+            color: 'inherit',
+            a: {
+              color: '#60a5fa',
+              '&:hover': {
+                color: '#93c5fd',
+              },
+            },
+          },
+        },
+      },
+    },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/typography'),
+  ],
 }
