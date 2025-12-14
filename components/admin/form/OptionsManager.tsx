@@ -1,6 +1,8 @@
 // components/admin/form/OptionsManager.tsx
 'use client';
 
+import RichTextEditor from '../editor/RichTextEditor';
+
 type OptionsManagerProps = {
   options: string[];
   onChange: (options: string[]) => void;
@@ -40,24 +42,28 @@ export default function OptionsManager({ options, onChange }: OptionsManagerProp
         </button>
       </div>
       
-      <div className="space-y-2">
+      <div className="space-y-3">
         {options.map((option, idx) => (
-          <div key={idx} className="flex items-center gap-2">
-            <span className="w-8 text-center font-medium text-gray-700 dark:text-gray-300">
+          <div key={idx} className="flex items-start gap-2">
+            <span className="w-8 text-center font-medium text-gray-700 dark:text-gray-300 pt-2">
               {String.fromCharCode(65 + idx)}.
             </span>
-            <input
-              type="text"
-              value={option}
-              onChange={(e) => handleOptionChange(idx, e.target.value)}
-              className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              placeholder={`Opsi ${String.fromCharCode(65 + idx)}`}
-            />
+            <div className="flex-1">
+              <RichTextEditor
+                content={option}
+                onChange={(content) => handleOptionChange(idx, content)}
+                placeholder={`Opsi ${String.fromCharCode(65 + idx)}`}
+                minHeight="80px"
+                showAdvancedFormatting={false}
+                allowImageUpload={true}
+                helperText="💡 Gunakan x² untuk pangkat, x₂ untuk subscript, ∑ untuk formula matematika"
+              />
+            </div>
             {options.length > 1 && (
               <button
                 type="button"
                 onClick={() => removeOption(idx)}
-                className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
+                className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors mt-1"
                 title="Hapus opsi"
               >
                 🗑️
@@ -65,6 +71,10 @@ export default function OptionsManager({ options, onChange }: OptionsManagerProp
             )}
           </div>
         ))}
+      </div>
+      
+      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+        💡 Tips: Setiap opsi mendukung formatting lengkap termasuk superscript (x²), subscript (H₂O), formula matematika (∑), dan gambar
       </div>
     </div>
   );

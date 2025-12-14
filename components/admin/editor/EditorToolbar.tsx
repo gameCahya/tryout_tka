@@ -1,4 +1,4 @@
-// components/admin/editor/EditorToolbar.tsx (Updated)
+// components/admin/editor/EditorToolbar.tsx
 'use client';
 
 import { Editor } from '@tiptap/react';
@@ -44,6 +44,9 @@ export default function EditorToolbar({
 }: EditorToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showMathModal, setShowMathModal] = useState(false);
+  const [showTableModal, setShowTableModal] = useState(false);
+  const [tableRows, setTableRows] = useState(3);
+  const [tableCols, setTableCols] = useState(3);
   const [mathLatex, setMathLatex] = useState('');
   const [mathType, setMathType] = useState<'inline' | 'block'>('inline');
   const [isUploading, setIsUploading] = useState(false);
@@ -55,19 +58,14 @@ export default function EditorToolbar({
     setIsUploading(true);
 
     try {
-      // Upload with deduplication
       const result = await uploadImageWithDedup(file);
 
       if (result.isDuplicate) {
         console.log(`✅ Image reused! Saved ${(result.savedSpace! / 1024).toFixed(2)}KB`);
-        // Optional: Show notification to user
-        // alert(`Gambar sudah ada, menggunakan yang sudah di-upload. Hemat ${(result.savedSpace! / 1024).toFixed(2)}KB!`);
       }
 
-      // Insert image into editor
       editor.chain().focus().setImage({ src: result.url }).run();
 
-      // Reset input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -91,6 +89,13 @@ export default function EditorToolbar({
     setMathLatex('');
     setShowMathModal(false);
   };
+
+  const insertTable = () => {
+    editor.chain().focus().insertTable({ rows: tableRows, cols: tableCols, withHeaderRow: true }).run();
+    setShowTableModal(false);
+  };
+
+  const isTableActive = editor.isActive('table');
 
   return (
     <>
@@ -225,6 +230,76 @@ export default function EditorToolbar({
           1. List
         </ToolbarButton>
 
+        <Divider />
+
+        {/* Table Controls */}
+        <ToolbarButton
+          onClick={() => setShowTableModal(true)}
+          title="Insert Table"
+        >
+          📊 Table
+        </ToolbarButton>
+
+        {isTableActive && (
+          <>
+            <ToolbarButton
+              onClick={() => editor.chain().focus().addColumnBefore().run()}
+              title="Add Column Before"
+            >
+              ⬅️ Col
+            </ToolbarButton>
+
+            <ToolbarButton
+              onClick={() => editor.chain().focus().addColumnAfter().run()}
+              title="Add Column After"
+            >
+              Col ➡️
+            </ToolbarButton>
+
+            <ToolbarButton
+              onClick={() => editor.chain().focus().deleteColumn().run()}
+              title="Delete Column"
+            >
+              ❌ Col
+            </ToolbarButton>
+
+            <ToolbarButton
+              onClick={() => editor.chain().focus().addRowBefore().run()}
+              title="Add Row Before"
+            >
+              ⬆️ Row
+            </ToolbarButton>
+
+            <ToolbarButton
+              onClick={() => editor.chain().focus().addRowAfter().run()}
+              title="Add Row After"
+            >
+              Row ⬇️
+            </ToolbarButton>
+
+            <ToolbarButton
+              onClick={() => editor.chain().focus().deleteRow().run()}
+              title="Delete Row"
+            >
+              ❌ Row
+            </ToolbarButton>
+
+            <ToolbarButton
+              onClick={() => editor.chain().focus().deleteTable().run()}
+              title="Delete Table"
+            >
+              🗑️ Table
+            </ToolbarButton>
+
+            <ToolbarButton
+              onClick={() => editor.chain().focus().toggleHeaderRow().run()}
+              title="Toggle Header Row"
+            >
+              Header
+            </ToolbarButton>
+          </>
+        )}
+
         {/* Image Upload */}
         {allowImageUpload && (
           <>
@@ -332,16 +407,85 @@ export default function EditorToolbar({
 
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={insertMath}
                 className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Insert
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setShowMathModal(false);
                   setMathLatex('');
                 }}
+                className="flex-1 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Table Modal */}
+      {showTableModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+              Insert Table
+            </h3>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Jumlah Baris
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="20"
+                value={tableRows}
+                onChange={(e) => setTableRows(parseInt(e.target.value) || 3)}
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Jumlah Kolom
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={tableCols}
+                onChange={(e) => setTableCols(parseInt(e.target.value) || 3)}
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+            </div>
+
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-4">
+              <p className="text-xs text-blue-800 dark:text-blue-300 font-medium mb-1">
+                💡 Tips:
+              </p>
+              <ul className="text-xs text-blue-700 dark:text-blue-400 space-y-1">
+                <li>Tabel akan dibuat dengan baris header otomatis</li>
+                <li>Setelah insert, gunakan tombol toolbar untuk menambah/hapus baris/kolom</li>
+                <li>Klik di dalam tabel untuk menampilkan kontrol tabel</li>
+              </ul>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={insertTable}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Insert Table
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowTableModal(false)}
                 className="flex-1 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
               >
                 Cancel

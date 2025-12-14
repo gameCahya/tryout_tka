@@ -8,6 +8,10 @@ import OrderedList from '@tiptap/extension-ordered-list';
 import ListItem from '@tiptap/extension-list-item';
 import Mathematics from '@tiptap/extension-mathematics';
 import Image from '@tiptap/extension-image';
+import {Table} from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
+import TableCell from '@tiptap/extension-table-cell';
+import TableHeader from '@tiptap/extension-table-header';
 
 export const getEditorExtensions = () => [
   StarterKit.configure({
@@ -50,6 +54,27 @@ export const getEditorExtensions = () => [
       class: 'max-w-full h-auto rounded-lg my-4',
     },
   }),
+  Table.configure({
+    resizable: true,
+    HTMLAttributes: {
+      class: 'border-collapse table-auto w-full my-4 border border-gray-300 dark:border-gray-600',
+    },
+  }),
+  TableRow.configure({
+    HTMLAttributes: {
+      class: 'border border-gray-300 dark:border-gray-600',
+    },
+  }),
+  TableHeader.configure({
+    HTMLAttributes: {
+      class: 'border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 p-2 font-semibold text-left',
+    },
+  }),
+  TableCell.configure({
+    HTMLAttributes: {
+      class: 'border border-gray-300 dark:border-gray-600 p-2',
+    },
+  }),
 ];
 
 export const getEditorProps = (minHeight: string = '150px') => ({
@@ -57,4 +82,3 @@ export const getEditorProps = (minHeight: string = '150px') => ({
     class: `prose dark:prose-invert max-w-none focus:outline-none min-h-[${minHeight}] p-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white`,
   },
 });
-
