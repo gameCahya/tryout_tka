@@ -318,7 +318,8 @@ export default function TryoutPage() {
       localStorage.removeItem(`tryout_${tryoutId}_start_time`);
 
       // Redirect
-      router.push(`/tryout/result?score=${score}&total=${questions.length}&duration=${timeSpent}`);
+      router.push(`/tryout/results?score=${score}&total=${questions.length}&duration=${timeSpent}&tryout_id=${tryoutId}`);
+
     } catch (err: any) {
       alert('Error: ' + err.message);
       setSubmitting(false);
