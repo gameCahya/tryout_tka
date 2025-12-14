@@ -131,19 +131,29 @@ export default function ManageQuestionsPage() {
     }
   };
 
-  const loadQuestions = async (tryoutId: string) => {
-    const { data, error } = await supabase
-      .from('questions')
-      .select('*')
-      .eq('tryout_id', tryoutId)
-      .order('created_at', { ascending: true });
+  // Ganti fungsi loadQuestions dengan ini:
+const loadQuestions = async (tryoutId: string, forceRefresh = false) => {
+  const { data, error } = await supabase
+    .from('questions')
+    .select('*')
+    .eq('tryout_id', tryoutId)
+    .order('created_at', { ascending: true });
 
-    if (!error && data) {
+  if (!error && data) {
+    // Force new reference to trigger re-render
+    if (forceRefresh) {
+      setQuestions([]);
+      setTimeout(() => {
+        setQuestions(data);
+      }, 100);
+    } else {
       setQuestions(data);
-    } else if (error) {
-      console.error('Error loading questions:', error);
     }
-  };
+  } else if (error) {
+    console.error('Error loading questions:', error);
+  }
+};
+
 
   const handleEdit = (question: Question) => {
     const tryout = tryouts.find(t => t.id === question.tryout_id);
@@ -193,11 +203,11 @@ export default function ManageQuestionsPage() {
   };
 
   const handleFormSuccess = () => {
-    setEditingQuestion(null);
-    if (selectedTryoutForView) {
-      loadQuestions(selectedTryoutForView);
-    }
-    setActiveTab('view');
+     setEditingQuestion(null);
+     if (selectedTryoutForView) {
+       loadQuestions(selectedTryoutForView, true); // Add forceRefresh = true
+     }
+  setActiveTab('view');
   };
 
   const handleCancelEdit = () => {

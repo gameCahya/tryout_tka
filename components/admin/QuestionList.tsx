@@ -113,7 +113,7 @@ export default function QuestionList({
 
           {/* Question Cards */}
           {questions.map((question, index) => (
-            <div key={question.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md dark:hover:shadow-xl transition-shadow bg-white dark:bg-gray-800">
+            <div key={`${question.id}-${question.question_text.slice(0, 50)}`} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md dark:hover:shadow-xl transition-shadow bg-white dark:bg-gray-800">
               <div className="flex justify-between items-start mb-3">
                 <h3 className="font-bold text-lg text-gray-900 dark:text-white">Soal #{index + 1}</h3>
                 <div className="flex gap-2">
