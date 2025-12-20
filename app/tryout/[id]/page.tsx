@@ -9,6 +9,7 @@ import ProgressBar from '@/components/tryout/ProgressBar';
 import QuestionNavigator from '@/components/tryout/QuestionNavigator';
 import QuestionCard from '@/components/tryout/QuestionCard';
 import NavigationButtons from '@/components/tryout/NavigationButtons';
+import AttemptInfo from '@/components/tryout/AttemptInfo';
 
 export default function TryoutPage() {
   const params = useParams();
@@ -24,6 +25,7 @@ export default function TryoutPage() {
   const [duration, setDuration] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // Fetch tryout data
   useEffect(() => {
@@ -45,7 +47,7 @@ export default function TryoutPage() {
         router.push('/dashboard');
         return;
       }
-
+      setCurrentUserId(session.user.id);
       const totalSeconds = tryoutData.duration_minutes * 60;
       setDuration(totalSeconds);
 
@@ -207,124 +209,204 @@ export default function TryoutPage() {
   };
 
   // Submit tryout
-  const submitTryout = async () => {
-    if (submitting) return;
-    setSubmitting(true);
+ const submitTryout = async () => {
+  if (submitting) return;
+  setSubmitting(true);
 
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push('/auth/login');
-        return;
-      }
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      router.push('/auth/login');
+      return;
+    }
 
-      // Calculate actual time spent
-      const savedStartTime = localStorage.getItem(`tryout_${tryoutId}_start_time`);
-      let timeSpent = duration - timeLeft;
-      
-      if (savedStartTime) {
-        const startTime = parseInt(savedStartTime);
-        const currentTime = Date.now();
-        timeSpent = Math.floor((currentTime - startTime) / 1000);
-      }
+    // Calculate time spent
+    const savedStartTime = localStorage.getItem(`tryout_${tryoutId}_start_time`);
+    let timeSpent = duration - timeLeft;
+    
+    if (savedStartTime) {
+      const startTime = parseInt(savedStartTime);
+      const currentTime = Date.now();
+      timeSpent = Math.floor((currentTime - startTime) / 1000);
+    }
 
-      // Calculate score
-      let score = 0;
-      const userAnswersData: any[] = [];
+    // Calculate score
+    let score = 0;
+    let correctCount = 0;
+    let wrongCount = 0;
+    let unansweredCount = 0;
+    const userAnswersData: any[] = [];
 
-      questions.forEach((q, i) => {
-        let isCorrect = false;
+    questions.forEach((q, i) => {
+      let isCorrect = false;
+      let hasAnswer = false;
 
-        if (q.question_type === 'multiple' && q.correct_answers) {
-          const userAnswers = multipleAnswers[i] || [];
-          const correctAnswers = q.correct_answers;
+      if (q.question_type === 'multiple' && q.correct_answers) {
+        const userAnswers = multipleAnswers[i] || [];
+        hasAnswer = userAnswers.length > 0;
+        const correctAnswers = q.correct_answers;
 
-          isCorrect = userAnswers.length === correctAnswers.length &&
-            userAnswers.every(ans => correctAnswers.includes(ans));
+        isCorrect = userAnswers.length === correctAnswers.length &&
+          userAnswers.every(ans => correctAnswers.includes(ans));
 
-          userAnswersData.push({
-            question_id: q.id,
-            user_answer: -1,
-            user_answers: userAnswers,
-            user_reasoning: null,
-            is_correct: isCorrect,
-          });
-        } else if (q.question_type === 'reasoning' && q.reasoning_answers) {
-          const userAns = reasoningAnswers[i] || {};
-          const correctAns = q.reasoning_answers;
+        userAnswersData.push({
+          question_id: q.id,
+          user_answer: -1,
+          user_answers: userAnswers,
+          user_reasoning: null,
+          is_correct: isCorrect,
+        });
+      } else if (q.question_type === 'reasoning' && q.reasoning_answers) {
+        const userAns = reasoningAnswers[i] || {};
+        hasAnswer = Object.keys(userAns).length === q.options.length;
 
-          isCorrect = true;
-          for (let optIdx = 0; optIdx < q.options.length; optIdx++) {
-            if (userAns[optIdx] !== correctAns[optIdx]) {
-              isCorrect = false;
-              break;
-            }
+        isCorrect = true;
+        for (let optIdx = 0; optIdx < q.options.length; optIdx++) {
+          if (userAns[optIdx] !== q.reasoning_answers[optIdx]) {
+            isCorrect = false;
+            break;
           }
-
-          userAnswersData.push({
-            question_id: q.id,
-            user_answer: -1,
-            user_answers: null,
-            user_reasoning: userAns,
-            is_correct: isCorrect,
-          });
-        } else {
-          isCorrect = answers[i] === q.correct_answer_index;
-
-          userAnswersData.push({
-            question_id: q.id,
-            user_answer: answers[i] || -1,
-            user_answers: null,
-            user_reasoning: null,
-            is_correct: isCorrect,
-          });
         }
 
-        if (isCorrect) score++;
-      });
+        userAnswersData.push({
+          question_id: q.id,
+          user_answer: -1,
+          user_answers: null,
+          user_reasoning: userAns,
+          is_correct: isCorrect,
+        });
+      } else {
+        hasAnswer = answers[i] !== -1;
+        isCorrect = answers[i] === q.correct_answer_index;
 
-      // Save result
-      const { data: resultData, error: resultError } = await supabase
-        .from('results')
-        .insert({
-          user_id: session.user.id,
-          tryout_id: tryoutId,
-          score,
-          total_questions: questions.length,
-          duration_seconds: timeSpent,
-          completed_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (resultError) {
-        alert('Gagal menyimpan hasil: ' + resultError.message);
-        setSubmitting(false);
-        return;
+        userAnswersData.push({
+          question_id: q.id,
+          user_answer: answers[i] || -1,
+          user_answers: null,
+          user_reasoning: null,
+          is_correct: isCorrect,
+        });
       }
 
-      // Save user answers
-      const answersToInsert = userAnswersData.map(ans => ({
-        ...ans,
-        result_id: resultData.id,
-      }));
+      if (isCorrect) {
+        score++;
+        correctCount++;
+      } else if (hasAnswer) {
+        wrongCount++;
+      } else {
+        unansweredCount++;
+      }
+    });
 
-      await supabase.from('user_answers').insert(answersToInsert);
+    const percentage = questions.length > 0 ? (score / questions.length) * 100 : 0;
 
-      // Clear localStorage
-      localStorage.removeItem(`tryout_${tryoutId}_answers`);
-      localStorage.removeItem(`tryout_${tryoutId}_multiple_answers`);
-      localStorage.removeItem(`tryout_${tryoutId}_reasoning_answers`);
-      localStorage.removeItem(`tryout_${tryoutId}_start_time`);
+    // Call function untuk handle submission
+    const { data: submissionData, error: submissionError } = await supabase
+      .rpc('handle_tryout_submission', {
+        p_user_id: session.user.id,
+        p_tryout_id: tryoutId,
+        p_score: score,
+        p_total_questions: questions.length,
+        p_duration_seconds: timeSpent,
+        p_percentage: percentage,
+        p_correct_answers: correctCount,
+        p_wrong_answers: wrongCount,
+        p_unanswered: unansweredCount,
+      });
 
-      // Redirect
-      router.push(`/tryout/results?score=${score}&total=${questions.length}&duration=${timeSpent}&tryout_id=${tryoutId}`);
-
-    } catch (err: any) {
-      alert('Error: ' + err.message);
+    if (submissionError) {
+      console.error('Submission error:', submissionError);
+      alert('Gagal menyimpan hasil: ' + submissionError.message);
       setSubmitting(false);
+      return;
     }
-  };
+
+    const resultInfo = submissionData[0];
+    const resultId = resultInfo.result_id;
+    const shouldUpdateRanking = resultInfo.should_update_ranking;
+
+    console.log('Result info:', resultInfo);
+
+    // Save user answers
+    const answersToInsert = userAnswersData.map(ans => ({
+      ...ans,
+      result_id: resultId,
+    }));
+
+    const { error: answersError } = await supabase
+      .from('user_answers')
+      .insert(answersToInsert);
+
+    if (answersError) {
+      console.error('Answers error:', answersError);
+    }
+
+    // ✅ UPDATE RANKING HANYA UNTUK ATTEMPT PERTAMA
+    if (shouldUpdateRanking) {
+      console.log('🏆 Updating ranking (attempt #1)');
+      
+      // Cek apakah sudah ada ranking
+      const { data: existingRank } = await supabase
+        .from('rankings')
+        .select('id')
+        .eq('tryout_id', tryoutId)
+        .eq('profile_id', session.user.id)
+        .single();
+
+      if (existingRank) {
+        // Update existing ranking
+        await supabase
+          .from('rankings')
+          .update({
+            result_id: resultId,
+            total_score: score,
+            percentage: percentage,
+            duration_seconds: timeSpent,
+            correct_answers: correctCount,
+            wrong_answers: wrongCount,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingRank.id);
+      } else {
+        // Insert new ranking
+        await supabase
+          .from('rankings')
+          .insert({
+            tryout_id: tryoutId,
+            profile_id: session.user.id,
+            result_id: resultId,
+            rank_position: 0, // Will be updated by trigger/function
+            total_score: score,
+            percentage: percentage,
+            duration_seconds: timeSpent,
+            correct_answers: correctCount,
+            wrong_answers: wrongCount,
+          });
+      }
+    } else {
+      console.log('ℹ️ Skipping ranking update (attempt #' + resultInfo.attempt_number + ')');
+    }
+
+    // Clear localStorage
+    localStorage.removeItem(`tryout_${tryoutId}_answers`);
+    localStorage.removeItem(`tryout_${tryoutId}_multiple_answers`);
+    localStorage.removeItem(`tryout_${tryoutId}_reasoning_answers`);
+    localStorage.removeItem(`tryout_${tryoutId}_start_time`);
+
+    // Show message if overwrite happened
+    if (resultInfo.is_overwrite) {
+      alert(`⚠️ ${resultInfo.message}\n\n📌 Percobaan pertama Anda tetap terlindungi dan digunakan untuk ranking.`);
+    }
+
+    // Redirect
+    router.push(`/tryout/results?score=${score}&total=${questions.length}&duration=${timeSpent}&tryout_id=${tryoutId}`);
+
+  } catch (err: any) {
+    console.error('Error:', err);
+    alert('Error: ' + err.message);
+    setSubmitting(false);
+  }
+};
 
   if (loading) {
     return (
@@ -337,8 +419,12 @@ export default function TryoutPage() {
   const currentQuestion = questions[currentQuestionIndex];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="max-w-7xl mx-auto">
+     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+        <div className="max-w-7xl mx-auto">
+          {currentUserId && (
+          <AttemptInfo tryoutId={tryoutId} userId={currentUserId} />
+           )}
+        
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Main Content - 3 columns */}
           <div className="lg:col-span-3">

@@ -258,6 +258,16 @@ export default function UserDashboardPage() {
               {tryouts.length} tryout
             </span>
           </div>
+          <div className="bg-white dark:bg-gray-800 p-12 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 text-center">
+              <div className="text-6xl mb-4">📭</div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                Tryout dimulai pada tanggal 22 Desember 2025
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400">
+                Tryout yang tersedia saat ini adalah uji coba.
+                Tryout yang sesungguhnya akan di mulai pada tanggal 22 Desember 2025
+              </p>
+            </div>
           
           {tryouts.length === 0 ? (
             <div className="bg-white dark:bg-gray-800 p-12 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 text-center">

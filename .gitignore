@@ -64,6 +64,7 @@ share/python-wheels/
 .installed.cfg
 *.egg-info/
 .installed.cfg
+backup_sql_db.txt
 
 # OS generated files
 .DS_Store

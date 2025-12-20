@@ -1,4 +1,3 @@
-// app/history/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -14,6 +13,8 @@ type HistoryItem = {
   created_at: string;
   tryout_title: string;
   has_paid: boolean;
+  attempt_number: number;  // ← Tambahan
+  is_locked: boolean;      // ← Tambahan
 };
 
 export default function HistoryPage() {
@@ -31,10 +32,10 @@ export default function HistoryPage() {
           return;
         }
 
-        // Ambil results dulu
+        // ✅ Ambil results dengan attempt_number dan is_locked
         const { data: results, error: resultsError } = await supabase
           .from('results')
-          .select('id, tryout_id, score, total_questions, duration_seconds, completed_at')
+          .select('id, tryout_id, score, total_questions, duration_seconds, completed_at, attempt_number, is_locked')
           .eq('user_id', session.user.id)
           .order('completed_at', { ascending: false });
 
@@ -48,7 +49,7 @@ export default function HistoryPage() {
           return;
         }
 
-        // Ambil tryout titles secara terpisah
+        // Ambil tryout titles
         const tryoutIds = [...new Set(results.map(r => r.tryout_id))];
         const { data: tryouts, error: tryoutsError } = await supabase
           .from('tryouts')
@@ -59,7 +60,6 @@ export default function HistoryPage() {
           throw tryoutsError;
         }
 
-        // Map tryout titles
         const tryoutMap = new Map(tryouts?.map(t => [t.id, t.title]) || []);
 
         // Transform data
@@ -72,6 +72,8 @@ export default function HistoryPage() {
           created_at: item.completed_at,
           tryout_title: tryoutMap.get(item.tryout_id) || 'Tryout',
           has_paid: false,
+          attempt_number: item.attempt_number || 1,
+          is_locked: item.is_locked || false,
         }));
 
         setHistory(historyData);
@@ -151,6 +153,16 @@ export default function HistoryPage() {
     );
   }
 
+  // ✅ Group by tryout untuk tampilan yang lebih rapi
+  const groupedHistory = history.reduce((acc, item) => {
+    const key = item.tryout_id;
+    if (!acc[key]) {
+      acc[key] = [];
+    }
+    acc[key].push(item);
+    return acc;
+  }, {} as Record<string, HistoryItem[]>);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
       <div className="max-w-5xl mx-auto">
@@ -170,7 +182,7 @@ export default function HistoryPage() {
         {history.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border-l-4 border-blue-500">
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Total Tryout</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Total Percobaan</p>
               <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{history.length}</p>
             </div>
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border-l-4 border-green-500">
@@ -180,9 +192,9 @@ export default function HistoryPage() {
               </p>
             </div>
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border-l-4 border-purple-500">
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Soal Dijawab</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Tryout Unik</p>
               <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                {history.reduce((sum, item) => sum + item.total_questions, 0)}
+                {Object.keys(groupedHistory).length}
               </p>
             </div>
           </div>
@@ -202,79 +214,111 @@ export default function HistoryPage() {
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
-            {history.map((item) => {
-              const percentage = parseFloat(getScorePercentage(item.score, item.total_questions));
-              const scoreColorClass = getScoreColor(percentage);
-
+          <div className="space-y-6">
+            {/* ✅ Tampilkan per tryout dengan semua attempt-nya */}
+            {Object.entries(groupedHistory).map(([tryoutId, attempts]) => {
+              const sortedAttempts = attempts.sort((a, b) => a.attempt_number - b.attempt_number);
+              const firstAttempt = sortedAttempts[0];
+              
               return (
-                <div
-                  key={item.id}
-                  className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700"
-                >
-                  <div className="p-6">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                      {/* Left Section */}
-                      <div className="flex-1 mb-4 md:mb-0">
-                        <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
-                          {item.tryout_title}
-                        </h3>
-                        <div className="flex flex-wrap gap-3 text-sm text-gray-600 dark:text-gray-400">
-                          <span className="flex items-center">
-                            📅 {formatDate(item.created_at)}
-                          </span>
-                          <span className="flex items-center">
-                            ⏱️ {formatDuration(item.duration_seconds)}
-                          </span>
-                          <span className="flex items-center">
-                            📊 {item.total_questions} soal
-                          </span>
-                        </div>
-                      </div>
+                <div key={tryoutId} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  {/* Header Tryout */}
+                  <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-4">
+                    <h3 className="text-xl font-bold text-white">
+                      {firstAttempt.tryout_title}
+                    </h3>
+                    <p className="text-blue-100 text-sm mt-1">
+                      {sortedAttempts.length} percobaan
+                    </p>
+                  </div>
 
-                      {/* Right Section - Score */}
-                      <div className="flex items-center gap-4">
-                        <div className={`px-6 py-3 rounded-lg border-2 ${scoreColorClass}`}>
-                          <p className="text-sm font-medium">Skor Anda</p>
-                          <p className="text-3xl font-bold">
-                            {item.score}/{item.total_questions}
-                          </p>
-                          <p className="text-sm font-medium">{percentage}%</p>
-                        </div>
+                  {/* List Attempts */}
+                  <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {sortedAttempts.map((item) => {
+                      const percentage = parseFloat(getScorePercentage(item.score, item.total_questions));
+                      const scoreColorClass = getScoreColor(percentage);
 
-                        <div className="flex flex-col gap-2">
-                          <button
-                            onClick={() => handleViewReview(item.id, item.tryout_id)}
-                            className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center gap-2 text-sm"
-                          >
-                            <span>📝</span>
-                            <span>Review</span>
-                          </button>
-                          <button
-                            onClick={() => handleViewRanking(item.tryout_id)}
-                            className="bg-purple-600 dark:bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors flex items-center gap-2 text-sm"
-                          >
-                            <span>🏆</span>
-                            <span>Ranking</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                      return (
+                        <div key={item.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            {/* Left Section */}
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                {/* Badge Attempt */}
+                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                  item.is_locked 
+                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200 border border-yellow-300 dark:border-yellow-700'
+                                    : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                                }`}>
+                                  {item.is_locked && '🔒 '}
+                                  Percobaan #{item.attempt_number}
+                                  {item.is_locked && ' • Ranking'}
+                                </span>
+                              </div>
+                              
+                              <div className="flex flex-wrap gap-3 text-sm text-gray-600 dark:text-gray-400">
+                                <span className="flex items-center">
+                                  📅 {formatDate(item.created_at)}
+                                </span>
+                                <span className="flex items-center">
+                                  ⏱️ {formatDuration(item.duration_seconds)}
+                                </span>
+                                <span className="flex items-center">
+                                  📊 {item.total_questions} soal
+                                </span>
+                              </div>
+                            </div>
 
-                    {/* Progress Bar */}
-                    <div className="mt-4">
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all ${
-                            percentage >= 80 ? 'bg-green-500 dark:bg-green-400' :
-                            percentage >= 60 ? 'bg-blue-500 dark:bg-blue-400' :
-                            percentage >= 40 ? 'bg-yellow-500 dark:bg-yellow-400' : 
-                            'bg-red-500 dark:bg-red-400'
-                          }`}
-                          style={{ width: `${percentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
+                            {/* Right Section - Score & Actions */}
+                            <div className="flex items-center gap-4">
+                              <div className={`px-4 py-2 rounded-lg border-2 ${scoreColorClass}`}>
+                                <p className="text-xs font-medium">Skor</p>
+                                <p className="text-2xl font-bold">
+                                  {item.score}/{item.total_questions}
+                                </p>
+                                <p className="text-xs font-medium">{percentage}%</p>
+                              </div>
+
+                              <div className="flex flex-col gap-2">
+                                <button
+                                  onClick={() => handleViewReview(item.id, item.tryout_id)}
+                                  className="bg-blue-600 dark:bg-blue-500 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center gap-2 text-sm"
+                                >
+                                  <span>📝</span>
+                                  <span>Review</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Progress Bar */}
+                          <div className="mt-3">
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                              <div
+                                className={`h-1.5 rounded-full transition-all ${
+                                  percentage >= 80 ? 'bg-green-500 dark:bg-green-400' :
+                                  percentage >= 60 ? 'bg-blue-500 dark:bg-blue-400' :
+                                  percentage >= 40 ? 'bg-yellow-500 dark:bg-yellow-400' : 
+                                  'bg-red-500 dark:bg-red-400'
+                                }`}
+                                style={{ width: `${percentage}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Footer - Ranking Button */}
+                  <div className="bg-gray-50 dark:bg-gray-700/50 p-4">
+                    <button
+                      onClick={() => handleViewRanking(tryoutId)}
+                      className="w-full bg-purple-600 dark:bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <span>🏆</span>
+                      <span>Lihat Ranking Tryout Ini</span>
+                    </button>
                   </div>
                 </div>
               );
