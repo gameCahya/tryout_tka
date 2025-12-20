@@ -607,20 +607,27 @@ const loadQuestions = async (tryoutId: string, forceRefresh = false) => {
                             <span>💰 {tryout.price === 0 ? 'Gratis' : `Rp ${tryout.price.toLocaleString('id-ID')}`}</span>
                           </div>
                         </div>
-                        <div className="flex gap-2 ml-4">
+                        <div className="flex gap-2 ml-4 flex-wrap">
+                          <button
+                            onClick={() => window.open(`/admin/tryout/${tryout.id}/preview`, '_blank')}
+                            className="px-3 py-1.5 bg-purple-500 dark:bg-purple-600 text-white rounded-lg hover:bg-purple-600 dark:hover:bg-purple-700 transition-colors text-sm font-medium shadow-sm hover:shadow-md"
+                            title="Preview tryout di tab baru"
+                          >
+                            👁️ Preview
+                          </button>
                           <button
                             onClick={() => handleEditTryout(tryout)}
-                            className="px-3 py-1.5 bg-yellow-500 dark:bg-yellow-600 text-white rounded-lg hover:bg-yellow-600 dark:hover:bg-yellow-700 transition-colors text-sm"
+                            className="px-3 py-1.5 bg-yellow-500 dark:bg-yellow-600 text-white rounded-lg hover:bg-yellow-600 dark:hover:bg-yellow-700 transition-colors text-sm font-medium shadow-sm hover:shadow-md"
                             title="Edit tryout"
                           >
-                            ✏️
+                            ✏️ Edit
                           </button>
                           <button
                             onClick={() => handleDeleteTryout(tryout.id)}
-                            className="px-3 py-1.5 bg-red-500 dark:bg-red-600 text-white rounded-lg hover:bg-red-600 dark:hover:bg-red-700 transition-colors text-sm"
+                            className="px-3 py-1.5 bg-red-500 dark:bg-red-600 text-white rounded-lg hover:bg-red-600 dark:hover:bg-red-700 transition-colors text-sm font-medium shadow-sm hover:shadow-md"
                             title="Hapus tryout"
                           >
-                            🗑️
+                            🗑️ Hapus
                           </button>
                         </div>
                       </div>
