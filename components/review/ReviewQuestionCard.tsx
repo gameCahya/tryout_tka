@@ -373,7 +373,65 @@ function PaymentProofUpload({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Fungsi untuk compress image
+  const compressImage = async (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // Resize jika terlalu besar (max 1200px)
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          // Compress dengan quality 0.7 (70%)
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                });
+                resolve(compressedFile);
+              } else {
+                reject(new Error('Compression failed'));
+              }
+            },
+            'image/jpeg',
+            0.7
+          );
+        };
+        img.onerror = reject;
+      };
+      reader.onerror = reject;
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
@@ -383,21 +441,35 @@ function PaymentProofUpload({
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (selectedFile.size > 5 * 1024 * 1024) {
-      setError('Ukuran file maksimal 5MB');
+    // Validate file size (max 10MB untuk file original)
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      setError('Ukuran file maksimal 10MB');
       return;
     }
 
-    setFile(selectedFile);
-    setError(null);
+    try {
+      // Compress image
+      const compressedFile = await compressImage(selectedFile);
+      
+      // Cek ukuran setelah kompresi
+      if (compressedFile.size > 2 * 1024 * 1024) {
+        setError('Gagal compress gambar. Silakan pilih gambar yang lebih kecil.');
+        return;
+      }
 
-    // Create preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result as string);
-    };
-    reader.readAsDataURL(selectedFile);
+      setFile(compressedFile);
+      setError(null);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(compressedFile);
+    } catch (err) {
+      console.error('Compression error:', err);
+      setError('Gagal memproses gambar');
+    }
   };
 
   const handleUpload = async () => {
@@ -486,19 +558,20 @@ function PaymentProofUpload({
               Informasi Pembayaran
             </h4>
             <div className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
-              <p><strong>Bank:</strong> BRI</p>
-              <p><strong>No. Rekening:</strong> 0158 0102 3138</p>
-              <p><strong>Atas Nama:</strong> A/n Andoyo</p>
+              <p><strong>Bank:</strong> BCA</p>
+              <p><strong>No. Rekening:</strong> 1234567890</p>
+              <p><strong>Atas Nama:</strong> TKA Tryout</p>
               <p><strong>Jumlah:</strong> Rp {amount.toLocaleString('id-ID')}</p>
             </div>
           </div>
- 
-
 
           <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-            Untuk Test Tryout, silahkan upload gambar screenshot pengerjaan tryout
             Silakan transfer ke rekening di atas dan upload bukti transfer Anda. 
             Admin akan memverifikasi dalam 1x24 jam.
+            <br />
+            <span className="text-xs text-gray-500 dark:text-gray-500">
+              * Gambar akan dikompres otomatis untuk menghemat storage
+            </span>
           </p>
         </div>
 
