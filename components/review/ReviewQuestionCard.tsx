@@ -1,10 +1,8 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Question } from '@/types/tryout';
 import { UserAnswer } from '@/types/review';
-import SingleChoiceQuestion from '@/components/tryout/SingleChoiceQuestion';
-import MultipleChoiceQuestion from '@/components/tryout/MultipleChoiceQuestion';
-import ReasoningQuestion from '@/components/tryout/ReasoningQuestion';
 import { supabase } from '@/lib/supabase';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -25,6 +23,30 @@ export default function ReviewQuestionCard({
   hasPaid,
   onUnlockClick,
 }: ReviewQuestionCardProps) {
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<'none' | 'pending' | 'approved'>('none');
+
+  // Fetch payment status
+  useEffect(() => {
+    checkPaymentStatus();
+  }, []);
+
+  const checkPaymentStatus = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    
+    const { data } = await supabase
+      .from('manual_payments')
+      .select('status')
+      .eq('user_id', session.user.id)
+      .eq('tryout_id', question.tryout_id)
+      .single();
+    
+    if (data) {
+      setPaymentStatus(data.status === 'approved' ? 'approved' : 'pending');
+    }
+  };
+
   const getImageUrl = (url: string | null | undefined): string | null => {
     if (!url) return null;
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
@@ -142,10 +164,21 @@ export default function ReviewQuestionCard({
         <h4 className="font-semibold text-lg mb-3 flex items-center text-gray-800 dark:text-white">
           💡 Pembahasan
         </h4>
-        {hasPaid ? (
+        {hasPaid || paymentStatus === 'approved' ? (
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded border border-blue-200 dark:border-blue-700">
             <p className="text-gray-800 dark:text-gray-200">
               {question.explanation || 'Pembahasan belum tersedia untuk soal ini.'}
+            </p>
+          </div>
+        ) : paymentStatus === 'pending' ? (
+          <div className="bg-yellow-100 dark:bg-yellow-900/20 p-6 rounded border-2 border-yellow-300 dark:border-yellow-700 text-center">
+            <div className="text-4xl mb-3">⏳</div>
+            <h5 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+              Menunggu Konfirmasi
+            </h5>
+            <p className="text-yellow-700 dark:text-yellow-300 text-sm">
+              Bukti pembayaran Anda sedang diverifikasi oleh admin.
+              Biasanya memakan waktu 1x24 jam.
             </p>
           </div>
         ) : (
@@ -155,17 +188,29 @@ export default function ReviewQuestionCard({
               Pembahasan Terkunci
             </h5>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Upgrade ke Premium untuk melihat pembahasan lengkap semua soal
+              Dapatkan akses pembahasan lengkap dengan Rp 15.000 saja!
             </p>
             <button
-              onClick={onUnlockClick}
-              className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-6 py-2 rounded-lg hover:from-yellow-600 hover:to-orange-600 transition-all font-medium"
+              onClick={() => setShowPaymentModal(true)}
+              className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-6 py-3 rounded-lg hover:from-yellow-600 hover:to-orange-600 transition-all font-medium"
             >
-              🎓 Unlock Pembahasan Premium
+              💳 Upload Bukti Pembayaran
             </button>
           </div>
         )}
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && question.tryout_id && (
+        <PaymentProofUpload
+          tryoutId={question.tryout_id}
+          onSuccess={() => {
+            setShowPaymentModal(false);
+            checkPaymentStatus();
+          }}
+          onCancel={() => setShowPaymentModal(false)}
+        />
+      )}
     </div>
   );
 }
@@ -190,7 +235,6 @@ function ReviewChoiceAnswers({
           : userAnswer?.user_answer === idx;
         const isCorrectAnswer = correctAnswers.includes(idx);
 
-        // Determine the styling based on answer status
         let borderColor = 'border-gray-300 dark:border-gray-600';
         let bgColor = 'bg-white dark:bg-gray-800';
         let iconColor = '';
@@ -305,6 +349,212 @@ function ReviewReasoningAnswers({
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+// Payment Proof Upload Component
+function PaymentProofUpload({
+  tryoutId,
+  onSuccess,
+  onCancel,
+}: {
+  tryoutId: string;
+  onSuccess: () => void;
+  onCancel: () => void;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+
+    // Validate file type
+    if (!selectedFile.type.startsWith('image/')) {
+      setError('Hanya file gambar yang diperbolehkan');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      setError('Ukuran file maksimal 5MB');
+      return;
+    }
+
+    setFile(selectedFile);
+    setError(null);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreview(reader.result as string);
+    };
+    reader.readAsDataURL(selectedFile);
+  };
+
+  const handleUpload = async () => {
+    if (!file) {
+      setError('Silakan pilih file terlebih dahulu');
+      return;
+    }
+
+    setUploading(true);
+    setError(null);
+
+    try {
+      // Get current user
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError('Anda harus login terlebih dahulu');
+        setUploading(false);
+        return;
+      }
+
+      // Upload file to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${session.user.id}_${tryoutId}_${Date.now()}.${fileExt}`;
+      const filePath = `payment-proofs/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('payment-proofs')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('payment-proofs')
+        .getPublicUrl(filePath);
+
+      console.log('Attempting to insert payment record...', {
+        user_id: session.user.id,
+        tryout_id: tryoutId,
+        payment_proof_url: urlData.publicUrl,
+      });
+
+      // Insert payment record
+      const { data: insertData, error: insertError } = await supabase
+        .from('manual_payments')
+        .insert({
+          user_id: session.user.id,
+          tryout_id: tryoutId,
+          payment_proof_url: urlData.publicUrl,
+          amount: 15000,
+          payment_date: new Date().toISOString(),
+          status: 'pending',
+        })
+        .select();
+
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        throw insertError;
+      }
+
+      console.log('Payment record inserted successfully:', insertData);
+
+      // Success
+      onSuccess();
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      setError(err.message || 'Gagal mengupload bukti pembayaran');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <h3 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">
+          Upload Bukti Pembayaran
+        </h3>
+
+        <div className="mb-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-700 mb-4">
+            <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">
+              Informasi Pembayaran
+            </h4>
+            <div className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
+              <p><strong>Bank:</strong> BCA</p>
+              <p><strong>No. Rekening:</strong> 1234567890</p>
+              <p><strong>Atas Nama:</strong> TKA Tryout</p>
+              <p><strong>Jumlah:</strong> Rp 15.000</p>
+            </div>
+          </div>
+
+          <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+            Silakan transfer ke rekening di atas dan upload bukti transfer Anda. 
+            Admin akan memverifikasi dalam 1x24 jam.
+          </p>
+        </div>
+
+        {/* File Input */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Bukti Transfer
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="block w-full text-sm text-gray-500 dark:text-gray-400
+              file:mr-4 file:py-2 file:px-4
+              file:rounded-lg file:border-0
+              file:text-sm file:font-medium
+              file:bg-blue-50 file:text-blue-700
+              hover:file:bg-blue-100
+              dark:file:bg-blue-900/30 dark:file:text-blue-400
+              dark:hover:file:bg-blue-900/50
+              cursor-pointer"
+            disabled={uploading}
+          />
+        </div>
+
+        {/* Preview */}
+        {preview && (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Preview
+            </label>
+            <img
+              src={preview}
+              alt="Preview"
+              className="w-full h-auto rounded-lg border border-gray-300 dark:border-gray-600"
+            />
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg">
+            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          </div>
+        )}
+
+        {/* Buttons */}
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-50"
+            disabled={uploading}
+          >
+            Batal
+          </button>
+          <button
+            onClick={handleUpload}
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={uploading || !file}
+          >
+            {uploading ? 'Mengupload...' : 'Upload'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
