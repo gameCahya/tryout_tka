@@ -13,7 +13,7 @@ type Tryout = {
   teacher_id?: string;
   total_questions: number;
   duration_minutes: number;
-  price: number;
+  explanation_price: number; // Ganti dari price
   school?: string;
   is_shared?: boolean;
 };
@@ -34,7 +34,7 @@ type TryoutFormData = {
   title: string;
   total_questions: number;
   duration_minutes: number;
-  price: number;
+  explanation_price: number; // Ganti dari price
   start_time: string;
   end_time: string;
   is_shared: boolean;
@@ -59,7 +59,7 @@ export default function ManageQuestionsPage() {
     title: '',
     total_questions: 40,
     duration_minutes: 90,
-    price: 0,
+    explanation_price: 15000, // Ganti dari price: 0
     start_time: '',
     end_time: '',
     is_shared: false
@@ -113,23 +113,23 @@ export default function ManageQuestionsPage() {
   }, [router]);
 
   const loadTryouts = async (role: string, currentUserId: string) => {
-    let tryoutQuery = supabase
-      .from('tryouts')
-      .select('id, title, teacher_id, total_questions, duration_minutes, price, school, is_shared');
+  let tryoutQuery = supabase
+    .from('tryouts')
+    .select('id, title, teacher_id, total_questions, duration_minutes, explanation_price, school, is_shared'); // Ganti price jadi explanation_price
 
-    // If teacher, only show their own tryouts
-    if (role === 'teacher') {
-      tryoutQuery = tryoutQuery.eq('teacher_id', currentUserId);
-    }
+  // If teacher, only show their own tryouts
+  if (role === 'teacher') {
+    tryoutQuery = tryoutQuery.eq('teacher_id', currentUserId);
+  }
 
-    const { data: tryoutList, error: tryoutError } = await tryoutQuery.order('created_at', { ascending: false });
+  const { data: tryoutList, error: tryoutError } = await tryoutQuery.order('created_at', { ascending: false });
 
-    if (tryoutError) {
-      console.error('Error fetching tryouts:', tryoutError);
-    } else {
-      setTryouts(tryoutList || []);
-    }
-  };
+  if (tryoutError) {
+    console.error('Error fetching tryouts:', tryoutError);
+  } else {
+    setTryouts(tryoutList || []);
+  }
+};
 
   // Ganti fungsi loadQuestions dengan ini:
 const loadQuestions = async (tryoutId: string, forceRefresh = false) => {
@@ -223,11 +223,11 @@ const loadQuestions = async (tryoutId: string, forceRefresh = false) => {
     }
 
     try {
-      const tryoutData = {
+     const tryoutData = {
         title: tryoutForm.title,
         total_questions: tryoutForm.total_questions,
         duration_minutes: tryoutForm.duration_minutes,
-        price: tryoutForm.price,
+        explanation_price: tryoutForm.explanation_price, // Ganti dari price
         start_time: tryoutForm.start_time || null,
         end_time: tryoutForm.end_time || null,
         teacher_id: userId,
@@ -259,7 +259,7 @@ const loadQuestions = async (tryoutId: string, forceRefresh = false) => {
         title: '',
         total_questions: 40,
         duration_minutes: 90,
-        price: 0,
+        explanation_price: 0,
         start_time: '',
         end_time: '',
         is_shared: false
@@ -276,24 +276,24 @@ const loadQuestions = async (tryoutId: string, forceRefresh = false) => {
   };
 
   const handleEditTryout = (tryout: Tryout) => {
-    if (userRole === 'teacher' && tryout.teacher_id !== userId) {
-      alert('Anda tidak memiliki izin untuk mengedit tryout ini');
-      return;
-    }
+  if (userRole === 'teacher' && tryout.teacher_id !== userId) {
+    alert('Anda tidak memiliki izin untuk mengedit tryout ini');
+    return;
+  }
 
-    setEditingTryout(tryout);
-    setTryoutForm({
-      title: tryout.title,
-      total_questions: tryout.total_questions,
-      duration_minutes: tryout.duration_minutes,
-      price: tryout.price,
-      start_time: '',
-      end_time: '',
-      is_shared: tryout.is_shared || false
-    });
-    setShowTryoutForm(true);
-    setActiveTab('tryout');
-  };
+  setEditingTryout(tryout);
+  setTryoutForm({
+    title: tryout.title,
+    total_questions: tryout.total_questions,
+    duration_minutes: tryout.duration_minutes,
+    explanation_price: tryout.explanation_price, // Ganti dari price
+    start_time: '',
+    end_time: '',
+    is_shared: tryout.is_shared || false
+  });
+  setShowTryoutForm(true);
+  setActiveTab('tryout');
+};
 
   const handleDeleteTryout = async (tryoutId: string) => {
     const tryout = tryouts.find(t => t.id === tryoutId);
@@ -335,7 +335,7 @@ const loadQuestions = async (tryoutId: string, forceRefresh = false) => {
       title: '',
       total_questions: 40,
       duration_minutes: 90,
-      price: 0,
+      explanation_price: 0,
       start_time: '',
       end_time: '',
       is_shared: false
@@ -482,8 +482,8 @@ const loadQuestions = async (tryoutId: string, forceRefresh = false) => {
                       </label>
                       <input
                         type="number"
-                        value={tryoutForm.price}
-                        onChange={(e) => setTryoutForm({ ...tryoutForm, price: parseInt(e.target.value) || 0 })}
+                        value={tryoutForm.explanation_price}
+                        onChange={(e) => setTryoutForm({ ...tryoutForm, explanation_price: parseInt(e.target.value) || 0 })}
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                         min="0"
                         placeholder="0 untuk gratis"
@@ -604,7 +604,7 @@ const loadQuestions = async (tryoutId: string, forceRefresh = false) => {
                           <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
                             <span>📝 {tryout.total_questions} soal</span>
                             <span>⏱️ {tryout.duration_minutes} menit</span>
-                            <span>💰 {tryout.price === 0 ? 'Gratis' : `Rp ${tryout.price.toLocaleString('id-ID')}`}</span>
+                            <span>💰 {tryout.explanation_price === 0 ? 'Gratis' : `Rp ${tryout.explanation_price.toLocaleString('id-ID')}`}</span>
                           </div>
                         </div>
                         <div className="flex gap-2 ml-4 flex-wrap">
