@@ -14,6 +14,7 @@ type ReviewQuestionCardProps = {
   questionNumber: number;
   hasPaid: boolean;
   onUnlockClick: () => void;
+  tryoutPrice?: number; // Harga dari database
 };
 
 export default function ReviewQuestionCard({
@@ -22,6 +23,7 @@ export default function ReviewQuestionCard({
   questionNumber,
   hasPaid,
   onUnlockClick,
+  tryoutPrice = 15000, // Default 15000 jika tidak ada
 }: ReviewQuestionCardProps) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'none' | 'pending' | 'approved'>('none');
@@ -188,7 +190,7 @@ export default function ReviewQuestionCard({
               Pembahasan Terkunci
             </h5>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Dapatkan akses pembahasan lengkap dengan Rp 15.000 saja!
+              Dapatkan akses pembahasan lengkap dengan Rp {tryoutPrice.toLocaleString('id-ID')} saja!
             </p>
             <button
               onClick={() => setShowPaymentModal(true)}
@@ -204,6 +206,7 @@ export default function ReviewQuestionCard({
       {showPaymentModal && question.tryout_id && (
         <PaymentProofUpload
           tryoutId={question.tryout_id}
+          amount={tryoutPrice}
           onSuccess={() => {
             setShowPaymentModal(false);
             checkPaymentStatus();
@@ -356,10 +359,12 @@ function ReviewReasoningAnswers({
 // Payment Proof Upload Component
 function PaymentProofUpload({
   tryoutId,
+  amount,
   onSuccess,
   onCancel,
 }: {
   tryoutId: string;
+  amount: number;
   onSuccess: () => void;
   onCancel: () => void;
 }) {
@@ -445,7 +450,7 @@ function PaymentProofUpload({
           user_id: session.user.id,
           tryout_id: tryoutId,
           payment_proof_url: urlData.publicUrl,
-          amount: 15000,
+          amount: amount, // Gunakan amount dari props
           payment_date: new Date().toISOString(),
           status: 'pending',
         })
@@ -481,14 +486,17 @@ function PaymentProofUpload({
               Informasi Pembayaran
             </h4>
             <div className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
-              <p><strong>Bank:</strong> BCA</p>
-              <p><strong>No. Rekening:</strong> 1234567890</p>
-              <p><strong>Atas Nama:</strong> TKA Tryout</p>
-              <p><strong>Jumlah:</strong> Rp 15.000</p>
+              <p><strong>Bank:</strong> BRI</p>
+              <p><strong>No. Rekening:</strong> 0158 0102 3138</p>
+              <p><strong>Atas Nama:</strong> A/n Andoyo</p>
+              <p><strong>Jumlah:</strong> Rp {amount.toLocaleString('id-ID')}</p>
             </div>
           </div>
+ 
+
 
           <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+            Untuk Test Tryout, silahkan upload gambar screenshot pengerjaan tryout
             Silakan transfer ke rekening di atas dan upload bukti transfer Anda. 
             Admin akan memverifikasi dalam 1x24 jam.
           </p>
