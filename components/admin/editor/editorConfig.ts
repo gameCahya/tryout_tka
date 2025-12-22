@@ -8,17 +8,54 @@ import OrderedList from '@tiptap/extension-ordered-list';
 import ListItem from '@tiptap/extension-list-item';
 import Mathematics from '@tiptap/extension-mathematics';
 import Image from '@tiptap/extension-image';
-import {Table} from '@tiptap/extension-table';
+import { Table } from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
+import Heading from '@tiptap/extension-heading';
+import Paragraph from '@tiptap/extension-paragraph';
+import HardBreak from '@tiptap/extension-hard-break';
+import { Indent } from './extensions/Indent';
 
 export const getEditorExtensions = () => [
   StarterKit.configure({
     bulletList: false,
     orderedList: false,
     listItem: false,
+    heading: false, // Disable heading dari StarterKit
+    paragraph: false, // Disable paragraph dari StarterKit
+    hardBreak: false, // Disable hardBreak dari StarterKit
   }),
+  
+  // Configure Heading explicitly dengan semua level
+  Heading.configure({
+    levels: [1, 2, 3, 4, 5, 6],
+    HTMLAttributes: {
+      class: 'tiptap-heading font-bold',
+    },
+  }),
+  
+  // Configure Paragraph explicitly
+  Paragraph.configure({
+    HTMLAttributes: {
+      class: 'tiptap-paragraph',
+    },
+  }),
+  
+  // Configure HardBreak untuk line breaks (Shift+Enter)
+  HardBreak.configure({
+    keepMarks: true,
+    HTMLAttributes: {
+      class: 'tiptap-hardbreak',
+    },
+  }),
+  
+  // Add Indent Extension for First-Line Indent (seperti di buku)
+  Indent.configure({
+    types: ['paragraph'],
+    indentSize: '2em', // Ukuran indent baris pertama
+  }),
+  
   BulletList.configure({
     HTMLAttributes: {
       class: 'list-disc ml-6 my-2',

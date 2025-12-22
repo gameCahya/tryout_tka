@@ -38,7 +38,7 @@ export default function RichTextEditor({
     extensions: getEditorExtensions(),
     content: content,
     editorProps: getEditorProps(minHeight),
-    immediatelyRender: false,
+    immediatelyRender: false, // PENTING: Required untuk Next.js SSR
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
       onChange(html);
@@ -78,9 +78,13 @@ export default function RichTextEditor({
     };
   }, [editor]);
 
+  // Update content saat prop berubah (untuk edit mode)
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content);
+      // Gunakan queueMicrotask untuk menghindari race condition
+      queueMicrotask(() => {
+        editor.commands.setContent(content, { emitUpdate: false });
+      });
     }
   }, [content, editor]);
 
@@ -129,7 +133,7 @@ export default function RichTextEditor({
         </label>
       )}
       
-      <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+      <div className="tiptap-wrapper border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
         <EditorToolbar 
           editor={editor} 
           showAdvancedFormatting={showAdvancedFormatting}
@@ -143,6 +147,85 @@ export default function RichTextEditor({
           {helperText}
         </p>
       )}
+
+      {/* Global CSS untuk preserve empty paragraphs dan proper heading styling */}
+      <style jsx global>{`
+        /* Preserve empty paragraphs */
+        .tiptap-wrapper .ProseMirror p.tiptap-paragraph {
+          min-height: 1.5em;
+          margin: 0.5em 0;
+        }
+
+        /* Preserve hard breaks */
+        .tiptap-wrapper .ProseMirror br.tiptap-hardbreak {
+          display: block;
+          content: "";
+          margin: 0.25em 0;
+        }
+
+        /* Heading styles - PENTING untuk H2 dan H3 */
+        .tiptap-wrapper .ProseMirror h1.tiptap-heading {
+          font-size: 2em;
+          font-weight: bold;
+          margin: 0.67em 0;
+          line-height: 1.2;
+        }
+
+        .tiptap-wrapper .ProseMirror h2.tiptap-heading {
+          font-size: 1.5em;
+          font-weight: bold;
+          margin: 0.75em 0;
+          line-height: 1.3;
+        }
+
+        .tiptap-wrapper .ProseMirror h3.tiptap-heading {
+          font-size: 1.17em;
+          font-weight: bold;
+          margin: 0.83em 0;
+          line-height: 1.4;
+        }
+
+        .tiptap-wrapper .ProseMirror h4.tiptap-heading {
+          font-size: 1em;
+          font-weight: bold;
+          margin: 1em 0;
+        }
+
+        .tiptap-wrapper .ProseMirror h5.tiptap-heading {
+          font-size: 0.83em;
+          font-weight: bold;
+          margin: 1.5em 0;
+        }
+
+        .tiptap-wrapper .ProseMirror h6.tiptap-heading {
+          font-size: 0.67em;
+          font-weight: bold;
+          margin: 2em 0;
+        }
+
+        /* Empty editor placeholder */
+        .tiptap-wrapper .ProseMirror p.is-editor-empty:first-child::before {
+          color: #adb5bd;
+          content: attr(data-placeholder);
+          float: left;
+          height: 0;
+          pointer-events: none;
+        }
+
+        /* Focus outline */
+        .tiptap-wrapper .ProseMirror:focus {
+          outline: none;
+        }
+
+        /* Dark mode text color */
+        .dark .tiptap-wrapper .ProseMirror {
+          color: #e5e7eb;
+        }
+
+        .dark .tiptap-wrapper .ProseMirror p.is-editor-empty:first-child::before {
+          color: #6b7280;
+        }
+      `}</style>
 
       {/* Math Edit Modal */}
       {showMathEditModal && editingMath && (

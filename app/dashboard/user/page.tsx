@@ -18,7 +18,7 @@ type Tryout = {
   duration_minutes: number;
   start_time: string | null;
   end_time: string | null;
-  price: number;
+  explanation_price: number; // CHANGED FROM price to explanation_price
   school: string | null;
   is_shared: boolean;
 };
@@ -53,9 +53,10 @@ export default function UserDashboardPage() {
       // Fetch tryout list dengan filter waktu DAN sekolah
       const currentTime = new Date().toISOString();
       
+      // UPDATED: Changed price to explanation_price in select
       const { data: tryoutsData, error: tryoutsError } = await supabase
         .from('tryouts')
-        .select('id, title, total_questions, duration_minutes, start_time, end_time, price, school, is_shared')
+        .select('id, title, total_questions, duration_minutes, start_time, end_time, explanation_price, school, is_shared')
         .or(`start_time.is.null,start_time.lte.${currentTime}`)
         .or(`end_time.is.null,end_time.gte.${currentTime}`)
         // PENTING: Filter berdasarkan sekolah atau yang di-share
@@ -126,6 +127,7 @@ export default function UserDashboardPage() {
     return null;
   };
 
+  // UPDATED: Format explanation price instead of tryout price
   const formatPrice = (price: number) => {
     if (price === 0) return 'Gratis';
     return new Intl.NumberFormat('id-ID', {
@@ -258,16 +260,6 @@ export default function UserDashboardPage() {
               {tryouts.length} tryout
             </span>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-12 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 text-center">
-              <div className="text-6xl mb-4">📭</div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                Tryout dimulai pada tanggal 22 Desember 2025
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                Tryout yang tersedia saat ini adalah uji coba.
-                Tryout yang sesungguhnya akan di mulai pada tanggal 22 Desember 2025
-              </p>
-            </div>
           
           {tryouts.length === 0 ? (
             <div className="bg-white dark:bg-gray-800 p-12 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 text-center">
@@ -276,7 +268,8 @@ export default function UserDashboardPage() {
                 Tryout dimulai pada tanggal 22 Desember 2025
               </h3>
               <p className="text-gray-500 dark:text-gray-400">
-                Belum ada tryout yang tersedia saat ini. Silakan tunggu.
+                Tryout yang tersedia saat ini adalah uji coba.
+                Tryout yang sesungguhnya akan dimulai pada tanggal 22 Desember 2025
               </p>
             </div>
           ) : (
@@ -316,10 +309,11 @@ export default function UserDashboardPage() {
                             <span>⏱️</span>
                             <span>{tryout.duration_minutes} menit</span>
                           </div>
+                          {/* UPDATED: Show explanation_price instead of price */}
                           <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                            <span>💰</span>
-                            <span className={tryout.price === 0 ? 'text-green-600 dark:text-green-400 font-medium' : ''}>
-                              {formatPrice(tryout.price)}
+                            <span>💡</span>
+                            <span className={tryout.explanation_price === 0 ? 'text-green-600 dark:text-green-400 font-medium' : ''}>
+                              Pembahasan: {formatPrice(tryout.explanation_price)}
                             </span>
                           </div>
                         </div>
@@ -343,7 +337,7 @@ export default function UserDashboardPage() {
                       </div>
                     </div>
                     
-                    {/* ACTION BUTTONS - HANYA SATU SECTION */}
+                    {/* ACTION BUTTONS */}
                     <div className="flex gap-2">
                       <button
                         onClick={() => router.push(`/tryout/${tryout.id}`)}

@@ -77,7 +77,7 @@ export default function TeacherDashboardPage() {
 
         setProfile(profileData);
 
-        // Fetch tryouts
+        // Fetch tryouts - REMOVED price field
         const { data: tryoutsData } = await supabase
           .from('tryouts')
           .select('id, title, total_questions, duration_minutes, created_at, teacher_id')

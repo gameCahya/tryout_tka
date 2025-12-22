@@ -2,6 +2,7 @@
 'use client';
 
 import HTMLRenderer from './HTMLRenderer';
+import { supabase } from '@/lib/supabase';
 
 type Question = {
   id: string;
@@ -12,6 +13,7 @@ type Question = {
   reasoning_answers: { [key: number]: 'benar' | 'salah' } | null;
   question_type: 'single' | 'multiple' | 'reasoning';
   explanation: string;
+  image_url?: string | null; // Added image support
 };
 
 type QuestionCardProps = {
@@ -26,6 +28,16 @@ export default function QuestionCard({ question, index, onEdit, onDelete }: Ques
     if (type === 'single') return 'Single Answer';
     if (type === 'multiple') return 'Multiple Answer (MCMA)';
     return 'Reasoning (Benar/Salah)';
+  };
+
+  // Get image URL from Supabase storage or direct URL
+  const getImageUrl = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    const { data } = supabase.storage.from('questions').getPublicUrl(url);
+    return data.publicUrl;
   };
 
   return (
@@ -52,6 +64,20 @@ export default function QuestionCard({ question, index, onEdit, onDelete }: Ques
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
           Tipe: <span className="font-medium text-gray-900 dark:text-white">{getQuestionTypeName(question.question_type)}</span>
         </p>
+
+        {/* Image display with error handling */}
+        {question.image_url && (
+          <img
+            src={getImageUrl(question.image_url) || ''}
+            alt="Soal"
+            className="max-w-full h-auto mb-4 rounded border dark:border-gray-600"
+            crossOrigin="anonymous"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        )}
+
         <HTMLRenderer 
           content={question.question_text} 
           className="text-gray-800 dark:text-gray-200"
