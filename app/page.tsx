@@ -38,13 +38,13 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Navbar */}
       <nav className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="text-2xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 🎓 Zona Edukasi
               </span>
             </div>
@@ -54,8 +54,8 @@ export default function LandingPage() {
               <a href="#features" className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition">Fitur</a>
               <a href="#how-it-works" className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition">Cara Kerja</a>
               <a href="#testimonials" className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition">Testimoni</a>
-              <a href="/auth/login" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">Login</a>
-              <a href="/auth/register" className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-full hover:shadow-lg transition">
+              <a href="/login" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">Login</a>
+              <a href="/register" className="bg-linear-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-full hover:shadow-lg transition">
                 Daftar Gratis
               </a>
             </div>
@@ -79,8 +79,8 @@ export default function LandingPage() {
               <a href="#features" className="block text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Fitur</a>
               <a href="#how-it-works" className="block text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Cara Kerja</a>
               <a href="#testimonials" className="block text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Testimoni</a>
-              <a href="/auth/login" className="block text-blue-600 dark:text-blue-400 font-medium">Login</a>
-              <a href="/auth/register" className="block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-full text-center">
+              <a href="/login" className="block text-blue-600 dark:text-blue-400 font-medium">Login</a>
+              <a href="/register" className="block bg-linear-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-full text-center">
                 Daftar Gratis
               </a>
             </div>
@@ -93,7 +93,7 @@ export default function LandingPage() {
         <div className="text-center">
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
             Persiapan Ujian
-            <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <span className="block bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               Jadi Lebih Mudah
             </span>
           </h1>
@@ -101,7 +101,7 @@ export default function LandingPage() {
             Platform tryout online terlengkap dengan berbagai tipe soal, timer otomatis, dan pembahasan detail untuk persiapan UTBK, CPNS, dan ujian lainnya.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/auth/register" className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-full text-lg font-semibold hover:shadow-xl transition transform hover:-translate-y-1">
+            <a href="/auth/register" className="bg-linear-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-full text-lg font-semibold hover:shadow-xl transition transform hover:-translate-y-1">
               🚀 Mulai Sekarang - GRATIS
             </a>
             <a href="#features" className="bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-8 py-4 rounded-full text-lg font-semibold border-2 border-gray-200 dark:border-gray-700 hover:border-blue-600 dark:hover:border-blue-400 transition">
@@ -137,7 +137,7 @@ export default function LandingPage() {
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <div key={index} className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-700 dark:to-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-600 hover:shadow-xl transition transform hover:-translate-y-2">
+              <div key={index} className="bg-linear-to-br from-gray-50 to-white dark:from-gray-700 dark:to-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-600 hover:shadow-xl transition transform hover:-translate-y-2">
                 <div className="text-5xl mb-4">{feature.icon}</div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{feature.title}</h3>
                 <p className="text-gray-600 dark:text-gray-300">{feature.description}</p>
@@ -157,7 +157,7 @@ export default function LandingPage() {
           
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
+              <div className="w-16 h-16 bg-linear-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
                 1
               </div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Daftar Akun</h3>
@@ -165,7 +165,7 @@ export default function LandingPage() {
             </div>
             
             <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
+              <div className="w-16 h-16 bg-linear-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
                 2
               </div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Pilih Tryout</h3>
@@ -173,7 +173,7 @@ export default function LandingPage() {
             </div>
             
             <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
+              <div className="w-16 h-16 bg-linear-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
                 3
               </div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Mulai Latihan</h3>
@@ -184,7 +184,7 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-gradient-to-r from-blue-600 to-purple-600 py-20">
+      <section className="bg-linear-to-r from-blue-600 to-purple-600 py-20">
         <div className="max-w-4xl mx-auto text-center px-4">
           <h2 className="text-4xl font-bold text-white mb-4">
             Siap Untuk Memulai?

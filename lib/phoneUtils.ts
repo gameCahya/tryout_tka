@@ -7,7 +7,7 @@
  */
 export function cleanPhone(input: string): string {
   // Hapus semua karakter non-digit
-  let num = input.replace(/\D/g, '');
+  const num = input.replace(/\D/g, '');
   
   // Jika dimulai dengan 0, return langsung
   if (num.startsWith('0')) {

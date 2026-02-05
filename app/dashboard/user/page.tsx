@@ -34,7 +34,7 @@ export default function UserDashboardPage() {
       // Check session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        router.push('/auth/login');
+        router.push('/login');
         return;
       }
 
@@ -77,7 +77,7 @@ export default function UserDashboardPage() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/auth/login');
+    router.push('/login');
   };
 
   const formatDateTime = (dateString: string | null) => {
@@ -184,7 +184,7 @@ export default function UserDashboardPage() {
         {/* User Profile Card */}
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 mb-8 transition-colors">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
+            <div className="w-12 h-12 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
               {profile?.full_name?.charAt(0).toUpperCase()}
             </div>
             <div>
@@ -218,7 +218,7 @@ export default function UserDashboardPage() {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 p-6 rounded-xl shadow-lg text-white">
+          <div className="bg-linear-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 p-6 rounded-xl shadow-lg text-white">
             <div className="flex items-center justify-between mb-2">
               <p className="text-blue-100">Total Tryout</p>
               <span className="text-2xl">📝</span>
@@ -227,7 +227,7 @@ export default function UserDashboardPage() {
             <p className="text-sm text-blue-100 mt-1">Tersedia untuk dikerjakan</p>
           </div>
           
-          <div className="bg-gradient-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 p-6 rounded-xl shadow-lg text-white">
+          <div className="bg-linear-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 p-6 rounded-xl shadow-lg text-white">
             <div className="flex items-center justify-between mb-2">
               <p className="text-green-100">Soal Tersedia</p>
               <span className="text-2xl">📚</span>
@@ -238,7 +238,7 @@ export default function UserDashboardPage() {
             <p className="text-sm text-green-100 mt-1">Total soal di semua tryout</p>
           </div>
           
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 p-6 rounded-xl shadow-lg text-white">
+          <div className="bg-linear-to-br from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 p-6 rounded-xl shadow-lg text-white">
             <div className="flex items-center justify-between mb-2">
               <p className="text-purple-100">Total Durasi</p>
               <span className="text-2xl">⏱️</span>

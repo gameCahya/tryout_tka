@@ -63,7 +63,7 @@ export default function AdminDashboardPage() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
-          router.push('/auth/login');
+          router.push('/login');
           return;
         }
 
@@ -138,7 +138,7 @@ export default function AdminDashboardPage() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/auth/login');
+    router.push('/login');
   };
 
   // Prepare stats

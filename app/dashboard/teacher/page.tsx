@@ -60,7 +60,7 @@ export default function TeacherDashboardPage() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
-          router.push('/auth/login');
+          router.push('/login');
           return;
         }
 
@@ -139,7 +139,7 @@ export default function TeacherDashboardPage() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/auth/login');
+    router.push('/login');
   };
 
   // Prepare tryouts with student count
