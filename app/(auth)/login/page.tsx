@@ -95,7 +95,7 @@ export default function LoginPage() {
         <AuthLink
           text="Belum punya akun?"
           linkText="Daftar Sekarang"
-          href="/auth/register"
+          href="/register"
         />
       </AuthCard>
     </AuthLayout>

@@ -15,7 +15,8 @@ node_modules/
 .env
 .env.local
 *.env.*
-
+batch-insert-users.ts
+convert-json-to-db.ts
 # Editors
 .vscode/
 .idea/
