@@ -637,7 +637,7 @@ export default function ManageQuestionsPage() {
                             className="px-3 py-1.5 bg-purple-500 dark:bg-purple-600 text-white rounded-lg hover:bg-purple-600 dark:hover:bg-purple-700 transition-colors text-sm font-medium shadow-sm hover:shadow-md"
                             title="Preview tryout di tab baru"
                           >
-                            👁️ Preview
+                            🔍 Preview
                           </button>
                           <button
                             onClick={() => handleEditTryout(tryout)}

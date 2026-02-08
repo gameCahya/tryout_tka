@@ -44,7 +44,7 @@ export function ProfileCard({
   return (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 mb-8 transition-colors">
       <div className="flex items-center gap-3 mb-4">
-        <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${color.gradient} flex items-center justify-center text-white text-xl font-bold`}>
+        <div className={`w-12 h-12 rounded-full bg-linear-to-br ${color.gradient} flex items-center justify-center text-white text-xl font-bold`}>
           {name?.charAt(0).toUpperCase()}
         </div>
         <div>

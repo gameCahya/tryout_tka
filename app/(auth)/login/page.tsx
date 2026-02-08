@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { cleanPhone, phoneToEmail } from '@/lib/phoneUtils';
+import { getErrorMessage } from '@/utils/error-handler'; // Import utility untuk error handling
 
 // Import components
 import AuthLayout from '@/components/auth/AuthLayout';
@@ -40,16 +41,43 @@ export default function LoginPage() {
     const fakeEmail = phoneToEmail(cleanPhoneNum);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error: authError } = await supabase.auth.signInWithPassword({
         email: fakeEmail,
         password,
       });
 
-      if (error) throw error;
+      if (authError) {
+        // Handle error berdasarkan kode error
+        let errorMessage = 'Login gagal';
+        
+        switch (authError.message) {
+          case 'Invalid login credentials':
+            errorMessage = 'No HP atau password salah';
+            break;
+          case 'Email not confirmed':
+            errorMessage = 'Email belum dikonfirmasi. Silakan cek email Anda';
+            break;
+          case 'User not found':
+            errorMessage = 'Akun tidak ditemukan. Silakan daftar terlebih dahulu';
+            break;
+          default:
+            errorMessage = authError.message;
+        }
+        
+        throw new Error(errorMessage);
+      }
 
       router.push(redirectTo);
-    } catch (err: any) {
-      setError(err.message || 'Login gagal');
+    } catch (err: unknown) { // Gunakan unknown bukan any
+      // Gunakan utility getErrorMessage jika ada
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : getErrorMessage 
+          ? getErrorMessage(err) 
+          : 'Terjadi kesalahan saat login';
+      
+      setError(errorMessage);
+      console.error('Login error:', err);
     } finally {
       setLoading(false);
     }

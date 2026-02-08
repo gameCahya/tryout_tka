@@ -249,7 +249,7 @@ export default function AdminTryoutPreview() {
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="text-white">
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-2xl">👁️</span>
+                <span className="text-2xl">🔍</span>
                 <h1 className="text-2xl font-bold">Mode Preview - Admin</h1>
               </div>
               <p className="text-purple-100">{tryout?.title}</p>
@@ -268,7 +268,7 @@ export default function AdminTryoutPreview() {
                 onClick={() => setShowAnswers(!showAnswers)}
                 className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg transition-colors font-medium"
               >
-                {showAnswers ? '🙈 Sembunyikan Jawaban' : '👁️ Tampilkan Jawaban'}
+                {showAnswers ? '🙈 Sembunyikan Jawaban' : '🔍 Tampilkan Jawaban'}
               </button>
               <button
                 onClick={() => router.push('/admin')}

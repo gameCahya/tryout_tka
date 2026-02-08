@@ -36,7 +36,7 @@ export default function AdminUsersPage() {
         // Check if user is admin
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
-          router.push('/auth/login');
+          router.push('/login');
           return;
         }
 
@@ -125,6 +125,12 @@ export default function AdminUsersPage() {
     });
   };
 
+  const handleRoleFilterChange = (value: string) => {
+  if (value === 'all' || value === 'admin' || value === 'teacher' || value === 'user') {
+    setRoleFilter(value);
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner message="Memuat data pengguna..." />;
   }
@@ -194,13 +200,14 @@ export default function AdminUsersPage() {
           </div>
 
           {/* Role Filter */}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Filter Role
             </label>
             <select
               value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value as any)}
+              onChange={(e) => handleRoleFilterChange(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="all">Semua Role</option>
@@ -290,7 +297,7 @@ export default function AdminUsersPage() {
                   <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                        <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
                           {user.full_name.charAt(0).toUpperCase()}
                         </div>
                         <div className="ml-3">

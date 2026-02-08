@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
@@ -17,13 +17,18 @@ type User = {
   school: string;
 };
 
+type UserAnswer = {
+  question_number: number;
+  selected_answer: string;
+};
+
 type TryoutResult = {
   id: string;
   user_id: string;
   tryout_id: string;
   score: number | null;
   completed_at: string | null;
-  answers: any[] | null;
+  answers: UserAnswer[] | null;
 };
 
 type Question = {
@@ -52,11 +57,7 @@ export default function UserTryoutResultsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchTryoutResult();
-  }, [tryoutId, userId]);
-
-  const fetchTryoutResult = async () => {
+  const fetchTryoutResult = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -123,13 +124,17 @@ export default function UserTryoutResultsPage() {
       setUser(userData);
       setResult(resultData);
       setQuestions(questionsData || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching tryout result:', err);
-      setError(err.message || 'Gagal memuat hasil tryout');
+      setError(err instanceof Error ? err.message : 'Gagal memuat hasil tryout');
     } finally {
       setLoading(false);
     }
-  };
+  }, [tryoutId, userId]);
+
+  useEffect(() => {
+    fetchTryoutResult();
+  }, [fetchTryoutResult]);
 
   if (loading) {
     return (
@@ -172,7 +177,7 @@ export default function UserTryoutResultsPage() {
   const totalQuestions = questions.length;
   const answeredQuestions = result?.answers ? result.answers.length : 0;
   const correctAnswers = result?.answers 
-    ? result.answers.filter((answer: any) => {
+    ? result.answers.filter((answer: UserAnswer) => {
         const question = questions.find(q => q.question_number === answer.question_number);
         return question && question.correct_answer === answer.selected_answer;
       }).length 
@@ -220,7 +225,7 @@ export default function UserTryoutResultsPage() {
 
           {/* Statistics */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 p-6 rounded-xl shadow-lg text-white">
+            <div className="bg-linear-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 p-6 rounded-xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-blue-100">Total Soal</p>
                 <span className="text-2xl">📝</span>
@@ -229,7 +234,7 @@ export default function UserTryoutResultsPage() {
               <p className="text-sm text-blue-100 mt-1">Jumlah soal</p>
             </div>
             
-            <div className="bg-gradient-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 p-6 rounded-xl shadow-lg text-white">
+            <div className="bg-linear-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 p-6 rounded-xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-green-100">Dijawab</p>
                 <span className="text-2xl">✅</span>
@@ -238,7 +243,7 @@ export default function UserTryoutResultsPage() {
               <p className="text-sm text-green-100 mt-1">Soal terjawab</p>
             </div>
             
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 p-6 rounded-xl shadow-lg text-white">
+            <div className="bg-linear-to-br from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 p-6 rounded-xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-purple-100">Benar</p>
                 <span className="text-2xl">🎯</span>
@@ -247,7 +252,7 @@ export default function UserTryoutResultsPage() {
               <p className="text-sm text-purple-100 mt-1">Jawaban benar</p>
             </div>
             
-            <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 dark:from-indigo-600 dark:to-indigo-700 p-6 rounded-xl shadow-lg text-white">
+            <div className="bg-linear-to-br from-indigo-500 to-indigo-600 dark:from-indigo-600 dark:to-indigo-700 p-6 rounded-xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-indigo-100">Nilai</p>
                 <span className="text-2xl">📊</span>
@@ -269,9 +274,9 @@ export default function UserTryoutResultsPage() {
               </div>
             ) : (
               <div className="space-y-6">
-                {questions.map((question, index) => {
+                {questions.map((question) => {
                   const userAnswer = result?.answers?.find(
-                    (answer: any) => answer.question_number === question.question_number
+                    (answer: UserAnswer) => answer.question_number === question.question_number
                   );
                   const isCorrect = userAnswer && question.correct_answer === userAnswer.selected_answer;
                   

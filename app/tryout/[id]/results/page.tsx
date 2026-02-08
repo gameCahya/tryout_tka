@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
@@ -24,8 +24,9 @@ type UserResult = {
   wrong_answers: number | null;
 };
 
+
 export default function TryoutResultsPage() {
-  const router = useRouter();
+ const router = useRouter();
   const params = useParams();
   const tryoutId = params.id as string;
   
@@ -34,11 +35,7 @@ export default function TryoutResultsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchTryoutResults();
-  }, [tryoutId]);
-
-  const fetchTryoutResults = async () => {
+  const fetchTryoutResults = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -161,13 +158,18 @@ export default function TryoutResultsPage() {
       })));
 
       setResults(transformedResults);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching tryout results:', err);
-      setError(err.message || 'Gagal memuat hasil tryout');
+      setError(err instanceof Error ? err.message : 'Gagal memuat hasil tryout');
     } finally {
       setLoading(false);
     }
-  };
+  }, [tryoutId, router]);
+
+   useEffect(() => {
+    fetchTryoutResults();
+  }, [fetchTryoutResults]);
+
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('id-ID', {
@@ -269,7 +271,7 @@ export default function TryoutResultsPage() {
 
           {/* Statistics */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 p-6 rounded-xl shadow-lg text-white">
+            <div className="bg-linear-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 p-6 rounded-xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-blue-100">Total Siswa</p>
                 <span className="text-2xl">👥</span>
@@ -278,7 +280,7 @@ export default function TryoutResultsPage() {
               <p className="text-sm text-blue-100 mt-1">Siswa</p>
             </div>
             
-            <div className="bg-gradient-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 p-6 rounded-xl shadow-lg text-white">
+            <div className="bg-linear-to-brrom-green-500 to-green-600 dark:from-green-600 dark:to-green-700 p-6 rounded-xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-green-100">Selesai</p>
                 <span className="text-2xl">✅</span>
@@ -287,7 +289,7 @@ export default function TryoutResultsPage() {
               <p className="text-sm text-green-100 mt-1">Telah selesai</p>
             </div>
             
-            <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 dark:from-yellow-600 dark:to-yellow-700 p-6 rounded-xl shadow-lg text-white">
+            <div className="bg-linear-to-br from-yellow-500 to-yellow-600 dark:from-yellow-600 dark:to-yellow-700 p-6 rounded-xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-yellow-100">Rata-rata</p>
                 <span className="text-2xl">📊</span>
@@ -296,7 +298,7 @@ export default function TryoutResultsPage() {
               <p className="text-sm text-yellow-100 mt-1">Nilai rata-rata</p>
             </div>
             
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 p-6 rounded-xl shadow-lg text-white">
+            <div className="bg-linear-to-br from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 p-6 rounded-xl shadow-lg text-white">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-purple-100">Tertinggi</p>
                 <span className="text-2xl">🏆</span>

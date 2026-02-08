@@ -26,7 +26,7 @@ export function StatCard({ title, value, subtitle, icon, gradient }: StatCardPro
   };
 
   return (
-    <div className={`bg-gradient-to-br ${gradients[gradient]} p-6 rounded-xl shadow-lg text-white`}>
+    <div className={`bg-linear-to-br ${gradients[gradient]} p-6 rounded-xl shadow-lg text-white`}>
       <div className="flex items-center justify-between mb-2">
         <p className={textColors[gradient]}>{title}</p>
         <span className="text-2xl">{icon}</span>

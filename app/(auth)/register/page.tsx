@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { cleanPhone, phoneToEmail, validateIndonesianPhone } from '@/lib/phoneUtils';
 import { getErrorMessage } from '@/utils/error-handler';
-import type { FonnteResponse } from '@/lib/fonnte';
 
 // Import components
 import AuthLayout from '@/components/auth/AuthLayout';

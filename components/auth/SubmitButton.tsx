@@ -12,8 +12,8 @@ export default function SubmitButton({ loading, loadingText, text }: SubmitButto
       disabled={loading}
       className={`w-full py-3 px-4 rounded-xl text-white font-semibold shadow-lg transition-all duration-200 ${
         loading 
-          ? 'bg-gradient-to-r from-blue-400 to-indigo-400 cursor-not-allowed dark:from-blue-600 dark:to-indigo-600' 
-          : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 dark:from-blue-700 dark:to-indigo-700 dark:hover:from-blue-600 dark:hover:to-indigo-600'
+          ? 'bg-linear-to-r from-blue-400 to-indigo-400 cursor-not-allowed dark:from-blue-600 dark:to-indigo-600' 
+          : 'bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 dark:from-blue-700 dark:to-indigo-700 dark:hover:from-blue-600 dark:hover:to-indigo-600'
       }`}
     >
       {loading ? (
