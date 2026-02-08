@@ -12,7 +12,7 @@ export default function DashboardPage() {
       // Check session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        router.push('/auth/login');
+        router.push('/login');
         return;
       }
 
@@ -24,7 +24,7 @@ export default function DashboardPage() {
         .single();
 
       if (profileError || !profileData) {
-        router.push('/auth/login');
+        router.push('/login');
         return;
       }
 

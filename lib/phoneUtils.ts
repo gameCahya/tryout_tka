@@ -1,5 +1,4 @@
 // lib/phoneUtils.ts
-
 /**
  * Membersihkan dan menormalisasi nomor HP ke format Indonesia (08xx)
  * @param input - Nomor HP input
@@ -32,4 +31,23 @@ export function cleanPhone(input: string): string {
  */
 export function phoneToEmail(phone: string): string {
   return `${phone}@tryout.id`;
+}
+
+/**
+ * Validate Indonesian phone number format
+ */
+export function validateIndonesianPhone(phone: string): boolean {
+  const cleaned = cleanPhone(phone);
+  return /^08[1-9][0-9]{7,11}$/.test(cleaned);
+}
+
+/**
+ * Format phone number for display
+ */
+export function formatPhoneDisplay(phone: string): string {
+  const cleaned = cleanPhone(phone);
+  if (cleaned.length >= 10) {
+    return cleaned.replace(/(\d{4})(\d{4})(\d+)/, '$1-$2-$3');
+  }
+  return cleaned;
 }

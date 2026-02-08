@@ -10,7 +10,7 @@ type TryoutForm = {
   duration_minutes: number;
   start_time: string | null;
   end_time: string | null;
-  price: number;
+  explanation_price: number;
 };
 
 export default function CreateTryoutPage() {
@@ -20,7 +20,7 @@ export default function CreateTryoutPage() {
     duration_minutes: 60,
     start_time: null,
     end_time: null,
-    price: 0,
+    explanation_price: 0,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +30,7 @@ export default function CreateTryoutPage() {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'total_questions' || name === 'duration_minutes' || name === 'price' 
+      [name]: name === 'total_questions' || name === 'duration_minutes' || name === 'explanation_price' 
         ? parseInt(value) || 0 
         : value
     }));
@@ -98,7 +98,7 @@ export default function CreateTryoutPage() {
           duration_minutes: formData.duration_minutes,
           start_time: formData.start_time || null,
           end_time: formData.end_time || null,
-          price: formData.price || 0,
+          explanation_price: formData.explanation_price || 0,
           teacher_id: session.user.id, // Changed from created_by to teacher_id
         }])
         .select()
@@ -203,7 +203,7 @@ export default function CreateTryoutPage() {
                 type="number"
                 id="price"
                 name="price"
-                value={formData.price}
+                value={formData.explanation_price}
                 onChange={handleChange}
                 min="0"
                 className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50 focus:bg-white dark:bg-gray-700/50 dark:border-gray-600 dark:focus:ring-blue-400 dark:focus:bg-gray-700 dark:text-white"

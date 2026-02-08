@@ -1,23 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import QuestionForm from '@/components/admin/QuestionForm';
 import QuestionList from '@/components/admin/QuestionList';
 import ThemeToggle from '@/components/ThemeToggle'; 
+import { Tryout, Question as ImportedQuestion } from '@/types/tryout';
 
-type Tryout = { 
-  id: string; 
-  title: string;
-  teacher_id?: string;
-  total_questions: number;
-  duration_minutes: number;
-  explanation_price: number; // Ganti dari price
-  school?: string;
-  is_shared?: boolean;
-};
-
+// Define local Question type yang sesuai dengan yang diharapkan komponen
 type Question = {
   id: string;
   question_text: string;
@@ -28,16 +19,35 @@ type Question = {
   question_type: 'single' | 'multiple' | 'reasoning';
   explanation: string;
   tryout_id: string;
+  image_url?: string | null;
+  created_at?: string;
 };
 
 type TryoutFormData = {
   title: string;
   total_questions: number;
   duration_minutes: number;
-  explanation_price: number; // Ganti dari price
+  explanation_price: number;
   start_time: string;
   end_time: string;
   is_shared: boolean;
+};
+
+// Helper function untuk mengkonversi ImportedQuestion ke Question
+const convertToQuestion = (importedQuestion: ImportedQuestion): Question => {
+  return {
+    id: importedQuestion.id,
+    question_text: importedQuestion.question_text,
+    options: importedQuestion.options,
+    correct_answer_index: importedQuestion.correct_answer_index,
+    correct_answers: importedQuestion.correct_answers ?? null,
+    reasoning_answers: importedQuestion.reasoning_answers ?? null,
+    question_type: (importedQuestion.question_type as 'single' | 'multiple' | 'reasoning') || 'single',
+    explanation: importedQuestion.explanation || '',
+    tryout_id: importedQuestion.tryout_id || '',
+    image_url: importedQuestion.image_url,
+    created_at: importedQuestion.created_at
+  };
 };
 
 export default function ManageQuestionsPage() {
@@ -59,11 +69,56 @@ export default function ManageQuestionsPage() {
     title: '',
     total_questions: 40,
     duration_minutes: 90,
-    explanation_price: 15000, // Ganti dari price: 0
+    explanation_price: 15000,
     start_time: '',
     end_time: '',
     is_shared: false
   });
+
+  const loadTryouts = useCallback(async (role: string, currentUserId: string) => {
+    let tryoutQuery = supabase
+      .from('tryouts')
+      .select('id, title, teacher_id, total_questions, duration_minutes, explanation_price, school, is_shared');
+
+    // If teacher, only show their own tryouts
+    if (role === 'teacher') {
+      tryoutQuery = tryoutQuery.eq('teacher_id', currentUserId);
+    }
+
+    const { data: tryoutList, error: tryoutError } = await tryoutQuery.order('created_at', { ascending: false });
+
+    if (tryoutError) {
+      console.error('Error fetching tryouts:', tryoutError);
+    } else {
+      setTryouts(tryoutList || []);
+    }
+  }, []);
+
+  // Ganti fungsi loadQuestions dengan ini:
+  const loadQuestions = useCallback(async (tryoutId: string, forceRefresh = false) => {
+    const { data, error } = await supabase
+      .from('questions')
+      .select('*')
+      .eq('tryout_id', tryoutId)
+      .order('created_at', { ascending: true });
+
+    if (!error && data) {
+      // Convert imported questions to local Question type
+      const convertedQuestions = data.map(convertToQuestion);
+      
+      // Force new reference to trigger re-render
+      if (forceRefresh) {
+        setQuestions([]);
+        setTimeout(() => {
+          setQuestions(convertedQuestions);
+        }, 100);
+      } else {
+        setQuestions(convertedQuestions);
+      }
+    } else if (error) {
+      console.error('Error loading questions:', error);
+    }
+  }, []);
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -110,50 +165,7 @@ export default function ManageQuestionsPage() {
     };
 
     checkAccess();
-  }, [router]);
-
-  const loadTryouts = async (role: string, currentUserId: string) => {
-  let tryoutQuery = supabase
-    .from('tryouts')
-    .select('id, title, teacher_id, total_questions, duration_minutes, explanation_price, school, is_shared'); // Ganti price jadi explanation_price
-
-  // If teacher, only show their own tryouts
-  if (role === 'teacher') {
-    tryoutQuery = tryoutQuery.eq('teacher_id', currentUserId);
-  }
-
-  const { data: tryoutList, error: tryoutError } = await tryoutQuery.order('created_at', { ascending: false });
-
-  if (tryoutError) {
-    console.error('Error fetching tryouts:', tryoutError);
-  } else {
-    setTryouts(tryoutList || []);
-  }
-};
-
-  // Ganti fungsi loadQuestions dengan ini:
-const loadQuestions = async (tryoutId: string, forceRefresh = false) => {
-  const { data, error } = await supabase
-    .from('questions')
-    .select('*')
-    .eq('tryout_id', tryoutId)
-    .order('created_at', { ascending: true });
-
-  if (!error && data) {
-    // Force new reference to trigger re-render
-    if (forceRefresh) {
-      setQuestions([]);
-      setTimeout(() => {
-        setQuestions(data);
-      }, 100);
-    } else {
-      setQuestions(data);
-    }
-  } else if (error) {
-    console.error('Error loading questions:', error);
-  }
-};
-
+  }, [router, loadTryouts]);
 
   const handleEdit = (question: Question) => {
     const tryout = tryouts.find(t => t.id === question.tryout_id);
@@ -196,18 +208,22 @@ const loadQuestions = async (tryoutId: string, forceRefresh = false) => {
       if (selectedTryoutForView) {
         loadQuestions(selectedTryoutForView);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      alert('Gagal menghapus soal: ' + err.message);
+      if (err instanceof Error) {
+        alert('Gagal menghapus soal: ' + err.message);
+      } else {
+        alert('Gagal menghapus soal: Terjadi kesalahan yang tidak diketahui');
+      }
     }
   };
 
   const handleFormSuccess = () => {
      setEditingQuestion(null);
      if (selectedTryoutForView) {
-       loadQuestions(selectedTryoutForView, true); // Add forceRefresh = true
+       loadQuestions(selectedTryoutForView, true);
      }
-  setActiveTab('view');
+    setActiveTab('view');
   };
 
   const handleCancelEdit = () => {
@@ -227,7 +243,7 @@ const loadQuestions = async (tryoutId: string, forceRefresh = false) => {
         title: tryoutForm.title,
         total_questions: tryoutForm.total_questions,
         duration_minutes: tryoutForm.duration_minutes,
-        explanation_price: tryoutForm.explanation_price, // Ganti dari price
+        explanation_price: tryoutForm.explanation_price,
         start_time: tryoutForm.start_time || null,
         end_time: tryoutForm.end_time || null,
         teacher_id: userId,
@@ -259,7 +275,7 @@ const loadQuestions = async (tryoutId: string, forceRefresh = false) => {
         title: '',
         total_questions: 40,
         duration_minutes: 90,
-        explanation_price: 0,
+        explanation_price: 15000,
         start_time: '',
         end_time: '',
         is_shared: false
@@ -269,31 +285,35 @@ const loadQuestions = async (tryoutId: string, forceRefresh = false) => {
 
       // Reload tryouts
       await loadTryouts(userRole!, userId);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      alert('Gagal menyimpan tryout: ' + err.message);
+      if (err instanceof Error) {
+        alert('Gagal menyimpan tryout: ' + err.message);
+      } else {
+        alert('Gagal menyimpan tryout: Terjadi kesalahan yang tidak diketahui');
+      }
     }
   };
 
   const handleEditTryout = (tryout: Tryout) => {
-  if (userRole === 'teacher' && tryout.teacher_id !== userId) {
-    alert('Anda tidak memiliki izin untuk mengedit tryout ini');
-    return;
-  }
+    if (userRole === 'teacher' && tryout.teacher_id !== userId) {
+      alert('Anda tidak memiliki izin untuk mengedit tryout ini');
+      return;
+    }
 
-  setEditingTryout(tryout);
-  setTryoutForm({
-    title: tryout.title,
-    total_questions: tryout.total_questions,
-    duration_minutes: tryout.duration_minutes,
-    explanation_price: tryout.explanation_price, // Ganti dari price
-    start_time: '',
-    end_time: '',
-    is_shared: tryout.is_shared || false
-  });
-  setShowTryoutForm(true);
-  setActiveTab('tryout');
-};
+    setEditingTryout(tryout);
+    setTryoutForm({
+      title: tryout.title,
+      total_questions: tryout.total_questions,
+      duration_minutes: tryout.duration_minutes,
+      explanation_price: tryout.explanation_price || 15000,
+      start_time: tryout.start_time || '',
+      end_time: tryout.end_time || '',
+      is_shared: tryout.is_shared || false
+    });
+    setShowTryoutForm(true);
+    setActiveTab('tryout');
+  };
 
   const handleDeleteTryout = async (tryoutId: string) => {
     const tryout = tryouts.find(t => t.id === tryoutId);
@@ -322,9 +342,13 @@ const loadQuestions = async (tryoutId: string, forceRefresh = false) => {
         setSelectedTryoutForView('');
         setQuestions([]);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      alert('Gagal menghapus tryout: ' + err.message);
+      if (err instanceof Error) {
+        alert('Gagal menghapus tryout: ' + err.message);
+      } else {
+        alert('Gagal menghapus tryout: Terjadi kesalahan yang tidak diketahui');
+      }
     }
   };
 
@@ -335,7 +359,7 @@ const loadQuestions = async (tryoutId: string, forceRefresh = false) => {
       title: '',
       total_questions: 40,
       duration_minutes: 90,
-      explanation_price: 0,
+      explanation_price: 15000,
       start_time: '',
       end_time: '',
       is_shared: false
@@ -574,7 +598,7 @@ const loadQuestions = async (tryoutId: string, forceRefresh = false) => {
                     Belum Ada Tryout
                   </h3>
                   <p className="text-gray-500 dark:text-gray-400">
-                    Klik tombol "Buat Tryout Baru" untuk memulai
+                    Klik tombol &quot;Buat Tryout Baru&quot; untuk memulai
                   </p>
                 </div>
               ) : (
@@ -604,7 +628,7 @@ const loadQuestions = async (tryoutId: string, forceRefresh = false) => {
                           <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
                             <span>📝 {tryout.total_questions} soal</span>
                             <span>⏱️ {tryout.duration_minutes} menit</span>
-                            <span>💰 {tryout.explanation_price === 0 ? 'Gratis' : `Rp ${tryout.explanation_price.toLocaleString('id-ID')}`}</span>
+                            <span>💰 {tryout.explanation_price === 0 ? 'Gratis' : `Rp ${tryout.explanation_price?.toLocaleString('id-ID')}`}</span>
                           </div>
                         </div>
                         <div className="flex gap-2 ml-4 flex-wrap">

@@ -241,14 +241,14 @@ export default function TeacherDashboardPage() {
           title="Tryout Saya"
           tryouts={tryoutsWithStats}
           onViewResults={(id) => router.push(`/tryout/${id}/results`)}
-          onEdit={(id) => router.push(`/tryout/${id}/edit`)}
+          onEdit={(id) => router.push(`/admin`)}
           showStudentCount={true}
           showResultsButton={true}
           showEditButton={true}
           emptyMessage="Anda belum membuat tryout"
           emptyAction={{
             label: 'Buat Tryout',
-            onClick: () => router.push('/tryout/create'),
+            onClick: () => router.push('/admin'),
           }}
           maxItems={5}
         />

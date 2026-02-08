@@ -1,10 +1,12 @@
-// app/auth/register/page.tsx
+// app/(auth)/register/page.tsx
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { cleanPhone, phoneToEmail } from '@/lib/phoneUtils';
+import { cleanPhone, phoneToEmail, validateIndonesianPhone } from '@/lib/phoneUtils';
+import { getErrorMessage } from '@/utils/error-handler';
+import type { FonnteResponse } from '@/lib/fonnte';
 
 // Import components
 import AuthLayout from '@/components/auth/AuthLayout';
@@ -16,6 +18,14 @@ import PasswordInput from '@/components/auth/PasswordInput';
 import SubmitButton from '@/components/auth/SubmitButton';
 import AuthLink from '@/components/auth/AuthLink';
 
+// Types for API responses
+interface ApiResponse {
+  success: boolean;
+  message?: string;
+  data?: unknown;
+  error?: string;
+}
+
 export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -26,7 +36,7 @@ export default function RegisterPage() {
   const router = useRouter();
 
   // Fungsi untuk mengirim WhatsApp selamat datang ke user
-  const sendWelcomeWA = async (phone: string, fullName: string) => {
+  const sendWelcomeWA = async (phone: string, fullName: string): Promise<void> => {
     try {
       const response = await fetch('/api/send-wa', {
         method: 'POST',
@@ -40,20 +50,24 @@ export default function RegisterPage() {
         }),
       });
 
-      const data = await response.json();
-      
       if (!response.ok) {
-        console.error('Gagal mengirim WA ke user:', data);
+        const errorData: ApiResponse = await response.json();
+        console.error('Gagal mengirim WA ke user:', errorData);
       } else {
+        const data: ApiResponse = await response.json();
         console.log('WhatsApp selamat datang berhasil dikirim ke user:', data);
       }
-    } catch (error) {
-      console.error('Error sending WhatsApp to user:', error);
+    } catch (error: unknown) {
+      console.error('Error sending WhatsApp to user:', getErrorMessage(error));
     }
   };
 
   // Fungsi untuk mengirim notifikasi pendaftaran ke admin
-  const sendRegistrationNotification = async (fullName: string, phone: string, school: string) => {
+  const sendRegistrationNotification = async (
+    fullName: string, 
+    phone: string, 
+    school: string
+  ): Promise<void> => {
     try {
       const response = await fetch('/api/send-wa', {
         method: 'POST',
@@ -66,15 +80,15 @@ export default function RegisterPage() {
         }),
       });
 
-      const data = await response.json();
-      
       if (!response.ok) {
-        console.error('Gagal mengirim notifikasi admin:', data);
+        const errorData: ApiResponse = await response.json();
+        console.error('Gagal mengirim notifikasi admin:', errorData);
       } else {
+        const data: ApiResponse = await response.json();
         console.log('Notifikasi pendaftaran berhasil dikirim ke admin:', data);
       }
-    } catch (error) {
-      console.error('Error sending registration notification:', error);
+    } catch (error: unknown) {
+      console.error('Error sending registration notification:', getErrorMessage(error));
     }
   };
 
@@ -84,7 +98,9 @@ export default function RegisterPage() {
     setError(null);
 
     const cleanPhoneNum = cleanPhone(phone);
-    if (!fullName || !cleanPhoneNum || !school || !password) {
+    
+    // Validation
+    if (!fullName.trim() || !cleanPhoneNum || !school.trim() || !password) {
       setError('Semua field wajib diisi');
       setLoading(false);
       return;
@@ -92,6 +108,13 @@ export default function RegisterPage() {
 
     if (password.length < 6) {
       setError('Password minimal 6 karakter');
+      setLoading(false);
+      return;
+    }
+
+    // Validate phone number format
+    if (!validateIndonesianPhone(cleanPhoneNum)) {
+      setError('Format nomor HP tidak valid. Gunakan format 08xxxxxxxxxx');
       setLoading(false);
       return;
     }
@@ -105,25 +128,52 @@ export default function RegisterPage() {
         password,
         options: {
           data: {
-            full_name: fullName,
+            full_name: fullName.trim(),
             phone: cleanPhoneNum,
-            school: school,
+            school: school.trim(),
           },
         },
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Registrasi gagal');
+      if (authError) {
+        throw new Error(authError.message);
+      }
+      
+      if (!authData.user) {
+        throw new Error('Registrasi gagal - tidak ada data user');
+      }
 
-      // Kirim WhatsApp
-      await sendWelcomeWA(cleanPhoneNum, fullName);
-      await sendRegistrationNotification(fullName, cleanPhoneNum, school);
+      console.log('Registration successful:', {
+        userId: authData.user.id,
+        email: authData.user.email,
+        session: authData.session ? 'Session created' : 'No session (email confirmation required)'
+      });
 
-      // Redirect
-      router.push('/dashboard');
-    } catch (err: any) {
-      console.error('Registration error:', err);
-      setError(err.message || 'Gagal mendaftar');
+      // Kirim WhatsApp notifications (run in background)
+      Promise.all([
+        sendWelcomeWA(cleanPhoneNum, fullName),
+        sendRegistrationNotification(fullName, cleanPhoneNum, school)
+      ]).catch(error => {
+        console.error('Error sending WhatsApp notifications:', getErrorMessage(error));
+        // Don't show error to user, just log it
+      });
+
+      // Check if we have a session (email confirmation might be disabled)
+      if (authData.session) {
+        // Auto-login successful, redirect to dashboard
+        router.push('/dashboard');
+      } else {
+        // Email confirmation required
+        setError('Registrasi berhasil! Silakan cek email Anda untuk konfirmasi akun.');
+        // Optional: Clear form
+        setFullName('');
+        setPhone('');
+        setSchool('');
+        setPassword('');
+      }
+    } catch (error: unknown) {
+      console.error('Registration error:', error);
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -160,6 +210,7 @@ export default function RegisterPage() {
             placeholder="081234567890"
             icon={<PhoneIcon />}
             required
+            helperText="Contoh: 081234567890"
           />
 
           <FormInput
@@ -194,7 +245,7 @@ export default function RegisterPage() {
         <AuthLink
           text="Sudah punya akun?"
           linkText="Login"
-          href="/auth/login"
+          href="/login"
         />
       </AuthCard>
     </AuthLayout>

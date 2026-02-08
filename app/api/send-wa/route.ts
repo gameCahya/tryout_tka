@@ -1,94 +1,119 @@
+// app/api/send-wa/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { Fonnte } from '@/lib/fonnte';
 
+interface RequestBody {
+  phone?: string;
+  fullName?: string;
+  isNotification?: boolean;
+  registrationData?: {
+    fullName: string;
+    phone: string;
+    school: string;
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { phone, fullName, isNotification, registrationData } = body;
-
-    let targetPhone = phone;
+    const body: RequestBody = await request.json();
     
-    if (isNotification) {
-      // Jika ini notifikasi untuk admin, gunakan nomor dari environment variable
-      const adminPhone = process.env.ADMIN_PHONE;
-      if (!adminPhone) {
+    if (!body.isNotification) {
+      // Send welcome message to user
+      if (!body.phone || !body.fullName) {
         return NextResponse.json(
-          { error: 'ADMIN_PHONE tidak ditemukan di environment variables' },
+          { error: 'Phone and fullName are required' },
+          { status: 400 }
+        );
+      }
+
+      const message = `Halo ${body.fullName}! 🎉
+
+Selamat datang di Zona Edukasi! 
+
+Akun Anda telah berhasil dibuat. Sekarang Anda dapat:
+✅ Mengakses tryout TKA
+✅ Melihat riwayat hasil ujian
+✅ Memantau perkembangan belajar
+
+Jika ada pertanyaan, hubungi admin kami.
+
+Salam sukses,
+Tim Zona Edukasi`;
+
+      const result = await Fonnte.sendWA({
+        target: body.phone,
+        message: message,
+        country_code: '62'
+      });
+
+      if (!result.success) {
+        return NextResponse.json(
+          { error: result.error || 'Failed to send WhatsApp' },
           { status: 500 }
         );
       }
-      targetPhone = adminPhone;
-    } else if (!targetPhone) {
-      // Jika bukan notifikasi dan tidak ada nomor yang ditentukan
-      return NextResponse.json(
-        { error: 'Phone wajib diisi' },
-        { status: 400 }
-      );
-    }
 
-    // Pastikan format nomor sesuai (62xxx tanpa +)
-    let formattedPhone = targetPhone.replace(/\D/g, '');
-    if (formattedPhone.startsWith('0')) {
-      formattedPhone = '62' + formattedPhone.substring(1);
-    } else if (!formattedPhone.startsWith('62')) {
-      formattedPhone = '62' + formattedPhone;
-    }
-
-    let message = '';
-    
-    if (isNotification && registrationData) {
-      // Pesan notifikasi untuk admin
-      const { fullName: registrantName, phone: registrantPhone, school: registrantSchool } = registrationData;
-      message = `🔔 NOTIFIKASI PENDAFTARAN BARU 🔔
-
-Nama: ${registrantName}
-Nomor HP: ${registrantPhone}
-Asal Sekolah: ${registrantSchool}
-
-Seseorang telah mendaftar di platform Anda!`;
+      return NextResponse.json({
+        success: true,
+        message: 'WhatsApp sent successfully',
+        data: result.data
+      });
     } else {
-      // Pesan selamat datang untuk user
-      message = `Halo ${fullName}! 👋
+      // Send notification to admin
+      if (!body.registrationData) {
+        return NextResponse.json(
+          { error: 'Registration data is required for notifications' },
+          { status: 400 }
+        );
+      }
 
-Selamat datang di platform Try Out kami! 🎓
+      const { fullName, phone, school } = body.registrationData;
+      const adminPhone = process.env.ADMIN_PHONE_NUMBER;
 
-Terima kasih telah mendaftar. Akun Anda telah berhasil dibuat dan siap digunakan.
+      if (!adminPhone) {
+        return NextResponse.json(
+          { error: 'Admin phone number not configured' },
+          { status: 500 }
+        );
+      }
 
-Silakan login untuk mulai mengikuti try out dan meningkatkan kemampuan Anda.
+      const message = `📋 *PENDAFTARAN BARU*
 
-Semangat belajar! 💪
+✅ *Nama*: ${fullName}
+📱 *No. HP*: ${phone}
+🏫 *Sekolah*: ${school}
+⏰ *Waktu*: ${new Date().toLocaleString('id-ID')}
 
-Silahkan join grup ini https://chat.whatsapp.com/BwCQLC7UjTF8obn5Zuaufn?mode=hqrc
+Segera verifikasi dan sambut user baru!`;
 
-*Note : password jangan sampai lupa ya, karena sistem password masih dalam pengembangan*
-`;
+      const result = await Fonnte.sendWA({
+        target: adminPhone,
+        message: message,
+        country_code: '62'
+      });
+
+      if (!result.success) {
+        return NextResponse.json(
+          { error: result.error || 'Failed to send admin notification' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Admin notification sent successfully',
+        data: result.data
+      });
     }
-
-    // Kirim ke Fonnte API menggunakan kelas Fonnte
-    const result = await Fonnte.sendWA({
-      target: formattedPhone,
-      message: message,
-      country_code: '62',
-    });
-
-    if (!result.success) {
-      console.error('Fonnte API Error:', result.error, result.data);
-      return NextResponse.json(
-        { error: 'Gagal mengirim WhatsApp', details: result.error },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ 
-      success: true, 
-      message: 'WhatsApp berhasil dikirim',
-      data: result.data 
-    });
-
-  } catch (error: any) {
-    console.error('Error sending WA:', error);
+  } catch (error: unknown) {
+    console.error('Error in send-wa API:', error);
+    
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : 'Unknown error occurred';
+    
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: errorMessage },
       { status: 500 }
     );
   }

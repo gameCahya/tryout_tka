@@ -1,19 +1,28 @@
-// app/layout.tsx (atau buat wrapper khusus)
+// app/layout.tsx atau app/(auth)/layout.tsx
+'use client';
 
-import { Suspense } from 'react';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en">
-      <body suppressHydrationWarning>
-        <Suspense fallback={<div>Loading...</div>}>
-          {children}
-        </Suspense>
-      </body>
-    </html>
-  );
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth event:', event);
+      
+      if (event === 'SIGNED_IN') {
+        router.push('/dashboard');
+      }
+      
+      if (event === 'SIGNED_OUT') {
+        router.push('/login');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [router]);
+
+  return <>{children}</>;
 }

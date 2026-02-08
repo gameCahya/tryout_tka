@@ -1,10 +1,10 @@
 // app/admin/tryout/[id]/preview/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Question } from '@/types/tryout';
+import { Question, Tryout } from '@/types/tryout';
 import QuestionCard from '@/components/tryout/QuestionCard';
 
 export default function AdminTryoutPreview() {
@@ -12,7 +12,7 @@ export default function AdminTryoutPreview() {
   const router = useRouter();
   const tryoutId = params.id as string;
 
-  const [tryout, setTryout] = useState<any>(null);
+  const [tryout, setTryout] = useState<Tryout | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
@@ -23,26 +23,12 @@ export default function AdminTryoutPreview() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
-  useEffect(() => {
-    fetchTryoutData();
-  }, [tryoutId]);
-
-  // Timer (can be paused)
-  useEffect(() => {
-    if (timeLeft <= 0 || isPaused || questions.length === 0) return;
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => Math.max(0, prev - 1));
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [timeLeft, isPaused, questions.length]);
-
-  const fetchTryoutData = async () => {
+  // Gunakan useCallback untuk memoize fungsi
+  const fetchTryoutData = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        router.push('/auth/login');
+        router.push('/login');
         return;
       }
 
@@ -72,7 +58,7 @@ export default function AdminTryoutPreview() {
         return;
       }
 
-      setTryout(tryoutData);
+      setTryout(tryoutData as Tryout);
       setTimeLeft(tryoutData.duration_minutes * 60);
 
       // Fetch questions
@@ -88,7 +74,7 @@ export default function AdminTryoutPreview() {
         return;
       }
 
-      setQuestions(questionsData);
+      setQuestions(questionsData as Question[]);
       setAnswers(new Array(questionsData.length).fill(-1));
       setMultipleAnswers(new Array(questionsData.length).fill(null).map(() => []));
       setReasoningAnswers({});
@@ -98,7 +84,22 @@ export default function AdminTryoutPreview() {
       alert('Terjadi kesalahan');
       router.push('/admin');
     }
-  };
+  }, [tryoutId, router]); // Tambahkan dependencies
+
+  useEffect(() => {
+    fetchTryoutData();
+  }, [fetchTryoutData]); // Sekarang fetchTryoutData stabil karena menggunakan useCallback
+
+  // Timer (can be paused)
+  useEffect(() => {
+    if (timeLeft <= 0 || isPaused || questions.length === 0) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => Math.max(0, prev - 1));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft, isPaused, questions.length]);
 
   const handleAnswerSelect = (optionIndex: number) => {
     const newAnswers = [...answers];
@@ -244,7 +245,7 @@ export default function AdminTryoutPreview() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
       <div className="max-w-7xl mx-auto">
         {/* Admin Preview Header */}
-        <div className="bg-gradient-to-r from-purple-600 to-purple-800 dark:from-purple-700 dark:to-purple-900 p-6 rounded-xl shadow-lg mb-6">
+        <div className="bg-linear-to-r from-purple-600 to-purple-800 dark:from-purple-700 dark:to-purple-900 p-6 rounded-xl shadow-lg mb-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="text-white">
               <div className="flex items-center gap-3 mb-2">
@@ -303,7 +304,7 @@ export default function AdminTryoutPreview() {
               <div className="mt-3 flex items-center gap-4">
                 <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div
-                    className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all"
+                    className="bg-linear-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all"
                     style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
                   ></div>
                 </div>

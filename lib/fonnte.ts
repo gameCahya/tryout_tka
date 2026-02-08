@@ -12,11 +12,25 @@ interface SendWAOptions {
   type?: 'chat' | 'image' | 'document';
 }
 
+interface FonnteResponseData {
+  status: boolean;
+  message?: string;
+  id?: string;
+  [key: string]: unknown; // Untuk properti tambahan yang mungkin ada
+}
+
+export interface FonnteResponse {
+  success: boolean;
+  message?: string;
+  data?: FonnteResponseData;
+  error?: string;
+}
+
 export class Fonnte {
   private static readonly API_URL = 'https://api.fonnte.com/send';
   private static readonly API_KEY = process.env.FONNTE_API_KEY;
 
-  static async sendWA(options: SendWAOptions): Promise<{ success: boolean; data?: any; error?: string }> {
+  static async sendWA(options: SendWAOptions): Promise<FonnteResponse> {
     if (!this.API_KEY) {
       return {
         success: false,
@@ -39,11 +53,11 @@ export class Fonnte {
           device_id: options.device_id,
           photo_url: options.photo_url,
           document_url: options.document_url,
-          type: options.type,
+          type: options.type || 'chat',
         }),
       });
 
-      const data = await response.json();
+      const data: FonnteResponseData = await response.json();
 
       if (!response.ok) {
         return {
@@ -55,12 +69,13 @@ export class Fonnte {
 
       return {
         success: true,
+        message: 'Pesan WhatsApp berhasil dikirim',
         data
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message || 'Terjadi kesalahan saat mengirim pesan WhatsApp'
+        error: error instanceof Error ? error.message : 'Terjadi kesalahan saat mengirim pesan WhatsApp'
       };
     }
   }

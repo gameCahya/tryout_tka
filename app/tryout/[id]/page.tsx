@@ -32,7 +32,7 @@ export default function TryoutPage() {
     const fetchTryoutData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        router.push('/auth/login');
+        router.push('/login');
         return;
       }
 
