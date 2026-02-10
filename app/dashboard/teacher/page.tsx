@@ -241,7 +241,7 @@ export default function TeacherDashboardPage() {
           title="Tryout Saya"
           tryouts={tryoutsWithStats}
           onViewResults={(id) => router.push(`/tryout/${id}/results`)}
-          onEdit={(id) => router.push(`/admin`)}
+          onEdit={() => router.push(`/admin`)}
           showStudentCount={true}
           showResultsButton={true}
           showEditButton={true}

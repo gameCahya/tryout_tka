@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
@@ -38,11 +38,7 @@ export default function TryoutRankingPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchRanking();
-  }, [tryoutId]);
-
-  const fetchRanking = async () => {
+  const fetchRanking = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -95,13 +91,18 @@ export default function TryoutRankingPage() {
       console.log('Ranking data received:', rankingData?.length || 0, 'entries');
       setRankings(rankingData || []);
 
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error in fetchRanking:', err);
-      setError(err.message || 'Terjadi kesalahan saat memuat data');
+      const errorMessage = err instanceof Error ? err.message : 'Terjadi kesalahan saat memuat data';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [tryoutId, router]);
+
+  useEffect(() => {
+    fetchRanking();
+  }, [fetchRanking]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -160,7 +161,7 @@ export default function TryoutRankingPage() {
   const otherRankings = rankings.slice(3);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -171,7 +172,7 @@ export default function TryoutRankingPage() {
             ← Kembali
           </button>
           <div className="text-center">
-            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+            <h1 className="text-3xl md:text-4xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
               🏆 Ranking Tryout
             </h1>
             <p className="text-lg text-gray-700 dark:text-gray-300">{tryout?.title}</p>
@@ -183,7 +184,7 @@ export default function TryoutRankingPage() {
 
         {/* Current User Rank */}
         {currentUserRank && (
-          <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 rounded-2xl shadow-xl mb-8 text-white">
+          <div className="bg-linear-to-rrom-blue-500 to-purple-600 p-6 rounded-2xl shadow-xl mb-8 text-white">
             <div className="text-center">
               <p className="text-blue-100 text-sm mb-2">Peringkat Anda</p>
               <div className="flex items-center justify-center gap-6">
@@ -213,7 +214,7 @@ export default function TryoutRankingPage() {
               {/* Rank 2 */}
               {topThree[1] && (
                 <div className="order-2 md:order-1">
-                  <div className="bg-gradient-to-br from-gray-100 to-gray-300 dark:from-gray-700 dark:to-gray-600 p-6 rounded-2xl shadow-xl text-center transform hover:scale-105 transition-transform">
+                  <div className="bg-linear-to-br from-gray-100 to-gray-300 dark:from-gray-700 dark:to-gray-600 p-6 rounded-2xl shadow-xl text-center transform hover:scale-105 transition-transform">
                     <div className="text-6xl mb-3">🥈</div>
                     <div className="text-5xl font-bold text-gray-700 dark:text-gray-200 mb-2">#2</div>
                     <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-1">{topThree[1].full_name}</h3>
@@ -229,7 +230,7 @@ export default function TryoutRankingPage() {
               {/* Rank 1 */}
               {topThree[0] && (
                 <div className="order-1 md:order-2 md:-mt-6">
-                  <div className="bg-gradient-to-br from-yellow-300 to-yellow-500 dark:from-yellow-500 dark:to-yellow-600 p-8 rounded-2xl shadow-2xl text-center transform hover:scale-105 transition-transform">
+                  <div className="bg-linear-to-br from-yellow-300 to-yellow-500 dark:from-yellow-500 dark:to-yellow-600 p-8 rounded-2xl shadow-2xl text-center transform hover:scale-105 transition-transform">
                     <div className="text-7xl mb-3">🥇</div>
                     <div className="text-6xl font-bold text-yellow-900 dark:text-yellow-100 mb-2">#1</div>
                     <h3 className="font-bold text-xl text-yellow-900 dark:text-white mb-1">{topThree[0].full_name}</h3>
@@ -245,7 +246,7 @@ export default function TryoutRankingPage() {
               {/* Rank 3 */}
               {topThree[2] && (
                 <div className="order-3">
-                  <div className="bg-gradient-to-br from-orange-300 to-orange-500 dark:from-orange-600 dark:to-orange-700 p-6 rounded-2xl shadow-xl text-center transform hover:scale-105 transition-transform">
+                  <div className="bg-linear-to-br from-orange-300 to-orange-500 dark:from-orange-600 dark:to-orange-700 p-6 rounded-2xl shadow-xl text-center transform hover:scale-105 transition-transform">
                     <div className="text-6xl mb-3">🥉</div>
                     <div className="text-5xl font-bold text-orange-900 dark:text-orange-100 mb-2">#3</div>
                     <h3 className="font-bold text-lg text-orange-900 dark:text-white mb-1">{topThree[2].full_name}</h3>

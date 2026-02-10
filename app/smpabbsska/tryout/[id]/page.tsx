@@ -19,21 +19,49 @@ interface ProfileData {
   created_at: string;
 }
 
-// Tipe data dari database (mungkin bisa null)
+// Tipe data dari database (sesuai struktur yang sebenarnya)
 interface RawQuestionData {
   id: string;
   question_text: string;
-  options: string[]; // Pastikan ini benar-benar string[]
-  correct_answer_index: number | null; // Bisa null di database
+  question_type: string; // 'single', 'multiple', 'true_false_matrix', dll
+  options: string[];
+  correct_answer_index: number | null;
+  correct_answers?: number[]; // Untuk tipe multiple choice
+  statements?: string[]; // Untuk tipe true_false_matrix
+  statements_answers?: boolean[]; // Untuk tipe true_false_matrix
+  question_points?: number;
+  question_order?: number;
+  tryout_id: string;
+  created_at: string;
 }
 
 // Tipe data internal untuk komponen
-interface TryoutQuestion {
+interface BaseQuestion {
   id: string;
   question_text: string;
+  question_type: string;
   options: string[];
-  correct_answer_index: number; // Tidak boleh null untuk keperluan internal
+  points: number;
+  order: number;
 }
+
+interface SingleChoiceQuestion extends BaseQuestion {
+  question_type: 'single';
+  correct_answer_index: number;
+}
+
+interface MultipleChoiceQuestion extends BaseQuestion {
+  question_type: 'multiple';
+  correct_answers: number[];
+}
+
+interface TrueFalseMatrixQuestion extends BaseQuestion {
+  question_type: 'true_false_matrix';
+  statements: string[];
+  statementsAnswers: boolean[];
+}
+
+type TryoutQuestion = SingleChoiceQuestion | MultipleChoiceQuestion | TrueFalseMatrixQuestion;
 
 interface TryoutData {
   id: string;
@@ -92,7 +120,21 @@ export default function TryoutDetailPage() {
       
       questions.forEach((q: TryoutQuestion) => {
         const userAnswer = answers[q.id] !== undefined ? answers[q.id] : -1;
-        const isCorrect = userAnswer !== -1 && userAnswer === q.correct_answer_index && q.correct_answer_index >= 0;
+        
+        // Logika penilaian berdasarkan tipe soal
+        let isCorrect = false;
+        
+        if (q.question_type === 'single') {
+          isCorrect = userAnswer !== -1 && userAnswer === q.correct_answer_index;
+        } else if (q.question_type === 'multiple') {
+          // Untuk multiple choice, penilaian berbeda - perlu disesuaikan
+          // Sementara kita anggap hanya untuk single choice dulu
+          isCorrect = userAnswer !== -1 && q.correct_answers.includes(userAnswer);
+        } else if (q.question_type === 'true_false_matrix') {
+          // Untuk true/false matrix juga perlu penilaian khusus
+          // Sementara kita gunakan logika sederhana
+          isCorrect = false;
+        }
         
         if (isCorrect) {
           correctCount++;
@@ -169,7 +211,8 @@ export default function TryoutDetailPage() {
 
     } catch (err) {
       console.error('Submission error:', err);
-      setError('Gagal menyimpan hasil tryout. Silakan coba lagi.');
+      const errorMessage = err instanceof Error ? err.message : 'Gagal menyimpan hasil tryout. Silakan coba lagi.';
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -229,24 +272,65 @@ export default function TryoutDetailPage() {
         // Ambil soal-soal berdasarkan tryout_id
         const { data: questionData, error: questionError } = await supabase
           .from('smpabbs_questions')
-          .select('id, question_text, options, correct_answer_index')
+          .select('*')
           .eq('tryout_id', tryoutId)
-          .order('created_at', { ascending: true });
+          .order('question_order', { ascending: true });
 
         if (questionError || !questionData) {
           console.error('Error fetching questions:', questionError);
           throw new Error('Soal tryout tidak ditemukan.');
         }
 
-        // --- MAPPING DATA DARI DATABASE KE TIPE INTERNAL ---
+        // MAPPING DATA DARI DATABASE KE TIPE INTERNAL
         const mappedQuestions: TryoutQuestion[] = questionData.map((rawQuestion: RawQuestionData) => {
-          const correctIndex = rawQuestion.correct_answer_index ?? -1;
           const optionsList = Array.isArray(rawQuestion.options) ? rawQuestion.options : [];
-          return {
+          
+          const baseQuestion = {
             id: rawQuestion.id,
             question_text: rawQuestion.question_text,
+            question_type: rawQuestion.question_type,
             options: optionsList,
-            correct_answer_index: correctIndex,
+            points: rawQuestion.question_points || 1,
+            order: rawQuestion.question_order || 0,
+          };
+
+          // Mapping berdasarkan tipe soal
+          switch (rawQuestion.question_type) {
+            case 'single':
+              if (rawQuestion.correct_answer_index !== null) {
+                return {
+                  ...baseQuestion,
+                  question_type: 'single' as const,
+                  correct_answer_index: rawQuestion.correct_answer_index
+                };
+              }
+              break;
+              
+            case 'multiple':
+              if (rawQuestion.correct_answers) {
+                return {
+                  ...baseQuestion,
+                  question_type: 'multiple' as const,
+                  correct_answers: rawQuestion.correct_answers
+                };
+              }
+              break;
+              
+            case 'true_false_matrix':
+              return {
+                ...baseQuestion,
+                question_type: 'true_false_matrix' as const,
+                statements: rawQuestion.statements || [],
+                statementsAnswers: rawQuestion.statements_answers || [],
+                options: rawQuestion.options || ['Benar', 'Salah']
+              };
+          }
+          
+          // Default fallback untuk soal single choice
+          return {
+            ...baseQuestion,
+            question_type: 'single' as const,
+            correct_answer_index: rawQuestion.correct_answer_index || 0
           };
         });
 
@@ -351,6 +435,16 @@ export default function TryoutDetailPage() {
     if (questions.length === 0) return 0;
     const answeredCount = Object.keys(answers).length;
     return Math.round((answeredCount / questions.length) * 100);
+  };
+
+  const getCorrectAnswerText = (question: TryoutQuestion): string => {
+    if (question.question_type === 'single') {
+      return question.options[question.correct_answer_index] || 'Tidak ada jawaban benar';
+    } else if (question.question_type === 'multiple') {
+      const correctOptions = question.correct_answers.map(idx => question.options[idx]);
+      return correctOptions.join(', ') || 'Tidak ada jawaban benar';
+    }
+    return 'Jawaban benar tidak tersedia';
   };
 
   if (loading) {
@@ -475,7 +569,7 @@ export default function TryoutDetailPage() {
                       {questions.map((q: TryoutQuestion, index: number) => {
                         const userAnswer = userAnswersMap[q.id];
                         const isAnswered = userAnswer && userAnswer.user_answer !== -1;
-                        const userAnswerText = isAnswered ? q.options[userAnswer.user_answer] : 'Tidak dijawab';
+                        const userAnswerText = isAnswered ? q.options[userAnswer.user_answer] || 'Tidak valid' : 'Tidak dijawab';
                         const isCorrect = userAnswer ? userAnswer.is_correct : false;
                         
                         return (
@@ -490,9 +584,9 @@ export default function TryoutDetailPage() {
                               <span className={`font-medium ${isCorrect ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                 {userAnswerText}
                               </span>
-                              {!isCorrect && q.correct_answer_index >= 0 && (
+                              {!isCorrect && (
                                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                  Jawaban benar: {q.options[q.correct_answer_index]}
+                                  Jawaban benar: {getCorrectAnswerText(q)}
                                 </div>
                               )}
                             </td>
@@ -645,29 +739,62 @@ export default function TryoutDetailPage() {
                       <div className="flex-1">
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{question.question_text}</h3>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {question.options.map((option: string, optIndex: number) => (
-                            <label 
-                              key={optIndex} 
-                              className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
-                                answers[question.id] === optIndex
-                                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 shadow-sm'
-                                  : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:border-gray-400 dark:hover:border-gray-500'
-                              }`}
-                            >
-                              <input
-                                type="radio"
-                                name={`question-${question.id}`}
-                                value={optIndex}
-                                checked={answers[question.id] === optIndex}
-                                onChange={() => handleAnswerSelect(question.id, optIndex)}
-                                className="sr-only"
-                              />
-                              <span className="mr-3 font-medium">{String.fromCharCode(65 + optIndex)}.</span>
-                              <span className="flex-1">{option}</span>
-                            </label>
-                          ))}
-                        </div>
+                        {/* Tampilan berdasarkan tipe soal */}
+                        {question.question_type === 'single' || question.question_type === 'multiple' ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {question.options.map((option: string, optIndex: number) => (
+                              <label 
+                                key={optIndex} 
+                                className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
+                                  answers[question.id] === optIndex
+                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 shadow-sm'
+                                    : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:border-gray-400 dark:hover:border-gray-500'
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name={`question-${question.id}`}
+                                  value={optIndex}
+                                  checked={answers[question.id] === optIndex}
+                                  onChange={() => handleAnswerSelect(question.id, optIndex)}
+                                  className="sr-only"
+                                />
+                                <span className="mr-3 font-medium">{String.fromCharCode(65 + optIndex)}.</span>
+                                <span className="flex-1">{option}</span>
+                              </label>
+                            ))}
+                          </div>
+                        ) : question.question_type === 'true_false_matrix' ? (
+                          <div className="space-y-4">
+                            {question.statements?.map((statement: string, stmtIndex: number) => (
+                              <div key={stmtIndex} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                <span className="text-gray-700 dark:text-gray-300">{statement}</span>
+                                <div className="flex gap-2">
+                                  {['Benar', 'Salah'].map((option, optIndex) => (
+                                    <label 
+                                      key={optIndex}
+                                      className={`px-4 py-2 border rounded-lg cursor-pointer ${
+                                        answers[`${question.id}_${stmtIndex}`] === optIndex
+                                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                                      }`}
+                                    >
+                                      <input
+                                        type="radio"
+                                        name={`${question.id}_${stmtIndex}`}
+                                        value={optIndex}
+                                        checked={answers[`${question.id}_${stmtIndex}`] === optIndex}
+                                        onChange={() => handleAnswerSelect(`${question.id}_${stmtIndex}`, optIndex)}
+                                        className="sr-only"
+                                      />
+                                      {option}
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </div>
