@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import Link from 'next/link';
+import Image from 'next/image';
 
 // Interfaces
 interface ProfileData {
@@ -33,6 +34,7 @@ interface RawQuestionData {
   question_order?: number;
   tryout_id: string;
   created_at: string;
+  image_url: string | null;
 }
 
 // Tipe data internal untuk komponen
@@ -43,22 +45,27 @@ interface BaseQuestion {
   options: string[];
   points: number;
   order: number;
+
 }
 
 interface SingleChoiceQuestion extends BaseQuestion {
   question_type: 'single';
   correct_answer_index: number;
+  image_url: string | null;
+  
 }
 
 interface MultipleChoiceQuestion extends BaseQuestion {
   question_type: 'multiple';
   correct_answers: number[];
+  image_url: string | null;
 }
 
 interface TrueFalseMatrixQuestion extends BaseQuestion {
   question_type: 'true_false_matrix';
   statements: string[];
   statementsAnswers: boolean[];
+  image_url: string | null;
 }
 
 type TryoutQuestion = SingleChoiceQuestion | MultipleChoiceQuestion | TrueFalseMatrixQuestion;
@@ -290,6 +297,7 @@ export default function TryoutDetailPage() {
             question_text: rawQuestion.question_text,
             question_type: rawQuestion.question_type,
             options: optionsList,
+            image_url: rawQuestion.image_url || null,
             points: rawQuestion.question_points || 1,
             order: rawQuestion.question_order || 0,
           };
@@ -737,7 +745,18 @@ export default function TryoutDetailPage() {
                         </div>
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{question.question_text}</h3>
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4"> {question.question_text} </h3> 
+                        {question.image_url && (
+                          <div className="mb-4">
+                            <Image
+                            src={question.image_url}
+                            alt={`Gambar soal ${index + 1}`}
+                            width={500} height={300}
+                            className="rounded-xl border border-gray-200 dark:border-gray-700 object-contain max-h-64 w-auto"
+                            style={{ maxHeight: '256px', width: 'auto' }}
+                            />
+                          </div>
+                        )}
                         
                         {/* Tampilan berdasarkan tipe soal */}
                         {question.question_type === 'single' || question.question_type === 'multiple' ? (

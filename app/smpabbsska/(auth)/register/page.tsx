@@ -217,7 +217,7 @@ export default function RegisterPage() {
   };
 
   const handleGoToLogin = () => {
-    router.push('/smpabbsska/auth/login');
+    router.push('/smpabbsska/login');
   };
 
   // Success screen
@@ -382,7 +382,7 @@ export default function RegisterPage() {
             <p className="text-gray-600 dark:text-gray-300">
               Sudah punya akun?{' '}
               <Link
-                href="/smpabbsska/auth/login"
+                href="/smpabbsska/login"
                 className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold transition-colors"
               >
                 Login di sini
