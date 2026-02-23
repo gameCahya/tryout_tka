@@ -1,5 +1,9 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+
+import type { Config } from 'tailwindcss';
+import typography from '@tailwindcss/typography'; // ← tambahkan ini
+
+const config: Config = {
   darkMode: 'class',
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
@@ -51,6 +55,8 @@ module.exports = {
     },
   },
   plugins: [
-    require('@tailwindcss/typography'),
+    typography,
   ],
-}
+};
+
+export default config;

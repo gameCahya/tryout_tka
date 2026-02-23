@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import 'katex/dist/katex.min.css';
 import { Question } from '../types';
 
 interface QuestionCardProps {
@@ -26,9 +27,10 @@ export default function QuestionCard({ question: q, index: idx, onEdit, onDelete
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-white leading-relaxed">
-                {q.question_text}
-              </p>
+              <div
+                className="text-sm font-medium text-gray-900 dark:text-white leading-relaxed prose prose-sm dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: q.question_text }}
+              />
               {/* Image thumbnail */}
               {q.image_url && (
                 <div className="mt-2">
@@ -72,9 +74,10 @@ export default function QuestionCard({ question: q, index: idx, onEdit, onDelete
           {q.question_type === 'essay' ? (
             <div className="mt-2 px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/50">
               <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 mb-1">Kunci Jawaban (admin only):</p>
-              <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed line-clamp-3">
-                {q.essay_answer || '-'}
-              </p>
+              <div
+                className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed prose prose-xs dark:prose-invert max-w-none line-clamp-3"
+                dangerouslySetInnerHTML={{ __html: q.essay_answer || '-' }}
+              />
             </div>
           ) : (
             <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5">

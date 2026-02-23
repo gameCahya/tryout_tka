@@ -2,6 +2,7 @@ import React from 'react';
 import { QuestionForm } from '../../types';
 import ImageUploader from '../ui/ImageUploader';
 import OptionEditor from '../ui/OptionEditor';
+import RichTextEditor from '../ui/RichTextEditor';
 
 interface QuestionModalProps {
   isEditing: boolean;
@@ -124,12 +125,11 @@ export default function QuestionModal({
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
               Teks Soal <span className="text-red-500">*</span>
             </label>
-            <textarea
+            <RichTextEditor
               value={form.question_text}
-              onChange={e => onFormChange({ ...form, question_text: e.target.value })}
-              rows={4}
-              className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-none"
-              placeholder="Tuliskan pertanyaan di sini..."
+              onChange={html => onFormChange({ ...form, question_text: html })}
+              placeholder="Tuliskan pertanyaan di sini... Gunakan toolbar untuk rumus matematika."
+              minHeight={120}
               autoFocus={!isEditing}
             />
           </div>
@@ -154,13 +154,12 @@ export default function QuestionModal({
                   💡 Isi dengan jawaban ideal atau rubrik penilaian. Ini hanya terlihat oleh admin, tidak ditampilkan ke siswa saat mengerjakan.
                 </p>
               </div>
-              <textarea
-                value={form.essay_answer}
-                onChange={e => onFormChange({ ...form, essay_answer: e.target.value })}
-                rows={5}
-                className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-none"
-                placeholder="Contoh: Jawaban ideal adalah... / Rubrik: (1) menyebutkan... (2) menjelaskan..."
-              />
+            <RichTextEditor
+              value={form.essay_answer}
+              onChange={html => onFormChange({ ...form, essay_answer: html })}
+              placeholder="Contoh: Jawaban ideal adalah... / Rubrik: (1) menyebutkan... (2) menjelaskan..."
+              minHeight={140}
+            />
             </div>
           ) : (
             <OptionEditor
