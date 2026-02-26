@@ -34,7 +34,6 @@ export default function DashboardPage() {
   useEffect(() => {
     const checkAuthAndLoadProfile = async () => {
       try {
-        // Cek session di client-side - FIXED SYNTAX
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
@@ -43,7 +42,6 @@ export default function DashboardPage() {
           return;
         }
 
-        // Jika session ada, ambil profil
         const { data: profileData, error: profileError } = await supabase
           .from('smpabbs_profiles')
           .select('*')
@@ -108,7 +106,6 @@ export default function DashboardPage() {
     );
   }
 
-  // Render dashboard jika profil berhasil dimuat
   if (profile) {
     return (
       <div className="min-h-screen bg-linear-to-br from-blue-50 to-green-50 dark:from-gray-900 dark:to-gray-800 p-4 sm:p-6">
@@ -141,6 +138,37 @@ export default function DashboardPage() {
               </div>
             </div>
           </header>
+
+          {/* ===== ASESMEN BANNER ===== */}
+          {/* <div className="mb-8">
+            <Link
+              href="/smpabbsska/asesmen"
+              className="block w-full bg-linear-to-r from-violet-600 via-purple-600 to-indigo-600 hover:from-violet-700 hover:via-purple-700 hover:to-indigo-700 rounded-2xl shadow-lg hover:shadow-xl transition-all overflow-hidden group"
+            >
+              <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-5 gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center text-3xl shrink-0 group-hover:scale-110 transition-transform">
+                    🧠
+                  </div>
+                  <div className="text-white">
+                    <p className="text-xs font-semibold opacity-80 uppercase tracking-wider mb-0.5">Kenali Dirimu</p>
+                    <h2 className="text-xl font-bold leading-tight">Asesmen Minat & Bakat</h2>
+                    <p className="text-sm opacity-80 mt-0.5 hidden sm:block">
+                      40 pertanyaan · 5 bidang · Hasil langsung terlihat
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 bg-white/20 hover:bg-white/30 transition-colors px-5 py-2.5 rounded-xl shrink-0">
+                  <span className="text-white font-semibold text-sm">Mulai Sekarang</span>
+                  <svg className="w-4 h-4 text-white group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div> */}
+              {/* Decorative dots */}
+              {/* <div className="absolute top-0 right-0 w-32 h-32 opacity-10 pointer-events-none" style={{ background: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '12px 12px' }} />
+            </Link>
+          </div> */}
 
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -223,6 +251,17 @@ export default function DashboardPage() {
                     <span className="text-2xl mr-3">🏆</span>
                     <span className="font-medium text-gray-900 dark:text-white">Leaderboard</span>
                   </Link>
+                  {/* ===== TOMBOL ASESMEN DI QUICK ACTIONS ===== */}
+                  <Link
+                    href="/smpabbsska/asesmen"
+                    className="flex items-center justify-center p-4 bg-linear-to-r from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 border border-violet-200 dark:border-violet-800 rounded-lg text-center hover:shadow-md transition-shadow sm:col-span-2"
+                  >
+                    <span className="text-2xl mr-3">🧠</span>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-900 dark:text-white">Asesmen Minat & Bakat</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Kenali potensi dan bakatmu</p>
+                    </div>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -245,6 +284,16 @@ export default function DashboardPage() {
                     <span className="text-gray-600 dark:text-gray-300">Peringkat</span>
                     <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">-</span>
                   </div>
+                  {/* Asesmen shortcut di stats */}
+                  <Link
+                    href="/smpabbsska/asesmen"
+                    className="flex justify-between items-center p-3 bg-violet-50 dark:bg-violet-900/20 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors group"
+                  >
+                    <span className="text-gray-600 dark:text-gray-300 text-sm">Asesmen Minat & Bakat</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs font-semibold text-violet-600 dark:text-violet-400 bg-violet-100 dark:bg-violet-900/40 px-2 py-0.5 rounded-full">Mulai →</span>
+                    </div>
+                  </Link>
                 </div>
               </div>
 
@@ -257,7 +306,7 @@ export default function DashboardPage() {
                 </p>
                 <div className="mt-4 pt-4 border-t border-yellow-200 dark:border-yellow-800">
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    💡 <strong>Tips:</strong> Kerjakan tryout dengan teliti dan lihat pembahasannya untuk belajar lebih baik.
+                    💡 <strong>Tips:</strong> Coba juga <Link href="/smpabbsska/asesmen" className="text-violet-600 dark:text-violet-400 font-semibold hover:underline">Asesmen Minat & Bakat</Link> untuk mengetahui potensimu!
                   </p>
                 </div>
               </div>
@@ -285,7 +334,6 @@ export default function DashboardPage() {
     );
   }
 
-  // Fallback jika tidak loading, tidak error, tapi profil null
   return (
     <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-blue-50 to-green-50 dark:from-gray-900 dark:to-gray-800">
       <p className="text-lg text-gray-700 dark:text-gray-300">Tidak ada data profil yang ditemukan.</p>
